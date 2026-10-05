@@ -22,3 +22,13 @@ def test_mensagens_amigaveis(codigo, tipo, trecho):
     erro = rastrear(codigo)["erro"]
     assert erro["tipo"] == tipo
     assert trecho in erro["mensagem"]
+
+
+def test_nome_errado_sugere_o_parecido():
+    erro = rastrear("bonus = 5\nprint(bonu)")["erro"]
+    assert erro["mensagem"].endswith("Você quis dizer `bonus`?")
+
+
+def test_nome_sem_parecido_nao_sugere():
+    erro = rastrear("print(xyz)")["erro"]
+    assert "Você quis dizer" not in erro["mensagem"]
