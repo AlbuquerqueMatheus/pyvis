@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PyVis</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header>
+    <h1>PyVis</h1>
+    <span id="status">Preparando o Python...</span>
+  </header>
+
+  <main>
+    <section class="coluna">
+      <label for="codigo">Seu código</label>
+      <textarea id="codigo" spellcheck="false">nomes = ["Ana", "Bia"]
+total = 0
+for i in range(3):
+    total = total + i
+    nomes.append(i)
+print("Total:", total)
+</textarea>
+      <label for="entradas">Entradas para o input() (uma por linha)</label>
+      <textarea id="entradas" class="pequeno" spellcheck="false"></textarea>
+      <div class="botoes">
+        <button id="executar" disabled>Executar</button>
+        <button id="voltar" disabled>◀ Voltar</button>
+        <button id="avancar" disabled>Avançar ▶</button>
+        <button id="reiniciar" disabled>Reiniciar</button>
+      </div>
+      <p id="contador"></p>
+    </section>
+
+    <section class="coluna">
+      <h2>Programa</h2>
+      <ol id="linhas"></ol>
+      <div id="erro" hidden></div>
+      <h2>Variáveis</h2>
+      <div id="variaveis"></div>
+      <h2>Saída</h2>
+      <pre id="saida"></pre>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

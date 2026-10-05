@@ -1,0 +1,9 @@
+[project]
+name = "pyvis-motor"
+version = "0.1.0"
+description = "Motor do PyVis: executa código Python passo a passo para visualização"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
