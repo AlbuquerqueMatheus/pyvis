@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primaria: #1e3a5f;
+  --color-secundaria: #4a6fa5;
+  --color-destaque: #f6ad55;
+  --color-fundo: #f7fafc;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+}
+
+body {
+  @apply bg-fundo text-gray-800 antialiased;
+}
+
+/* Linha que o Python vai executar no passo atual */
+.cm-linha-atual {
+  background-color: rgb(246 173 85 / 0.45);
+}
+.cm-linha-erro {
+  background-color: rgb(254 178 178 / 0.7);
+}

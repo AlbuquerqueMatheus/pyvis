@@ -5,6 +5,7 @@ um passo é instantâneo. É a mesma ideia do Python Tutor (Guo, 2013).
 """
 
 import builtins
+import difflib
 import io
 import sys
 import traceback
@@ -67,6 +68,15 @@ def _linha_do_erro(erro):
     return linha
 
 
+def _sugestao_de_nome(erro, escopo):
+    """Para um nome digitado errado, sugere o nome parecido que existe no programa."""
+    if not isinstance(erro, NameError) or not getattr(erro, "name", None):
+        return ""
+    candidatos = [nome for nome in escopo if not nome.startswith("__")]
+    parecidos = difflib.get_close_matches(erro.name, candidatos, n=1)
+    return f" Você quis dizer `{parecidos[0]}`?" if parecidos else ""
+
+
 def _input_com_entradas(entradas, saida):
     fila = list(entradas)
 
@@ -118,7 +128,7 @@ def rastrear(codigo, entradas=(), limite=LIMITE_PADRAO):
         erro = {
             "tipo": type(e).__name__,
             "linha": _linha_do_erro(e),
-            "mensagem": traduzir(e),
+            "mensagem": traduzir(e) + _sugestao_de_nome(e, escopo),
             "original": "".join(traceback.format_exception_only(type(e), e)).strip(),
         }
 
