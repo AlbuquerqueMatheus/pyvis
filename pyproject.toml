@@ -1,8 +1,9 @@
 [project]
 name = "pyvis-motor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Motor do PyVis: executa código Python passo a passo para visualização"
-requires-python = ">=3.10"
+# O alvo de verdade é o Python 3.14 do Pyodide; o CI confere do 3.11 ao 3.14 e dentro do Pyodide.
+requires-python = ">=3.11"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
