@@ -284,6 +284,13 @@ describe("fora de uma sala", () => {
     expect(localStorage.getItem(PREFIXO + "VELHA")).toBeNull();
     expect(localStorage.getItem(PREFIXO + "NOVA")).not.toBeNull();
     await usuario.selectOptions(screen.getByLabelText("Exemplos:"), "1");
+    // A página abre no Prever: um palpite fora de uma sala também não deixa rastro.
+    await usuario.click(screen.getByRole("button", { name: "▶ Executar" }));
+    expect(await screen.findByText("Antes de rodar")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: /Pular/ }));
+    expect(Object.keys(localStorage)).toEqual([PREFIXO + "NOVA"]);
+
+    await usuario.click(screen.getByRole("radio", { name: "Assistir" }));
     await usuario.click(screen.getByRole("button", { name: "▶ Executar" }));
     await screen.findByText("nota recebe 7: variável nova.", { selector: "p" });
     await usuario.keyboard("{ArrowRight}");

@@ -477,7 +477,11 @@ export function Palco({ motor, codigo, aoMudarCodigo, entradas, aoMudarEntradas,
         </>
       ) : (
         <p className="text-gray-600">
-          {estado.fase === "palpite_inicial" ? "Primeiro, dê o seu palpite." : "Clique em Executar para ver o programa rodando passo a passo."}
+          {estado.fase === "palpite_inicial"
+            ? "Primeiro, dê o seu palpite."
+            : modo === "prever"
+              ? "Clique em Executar. Antes de ver o resultado, você dá palpites."
+              : "Clique em Executar para ver o programa rodando passo a passo."}
         </p>
       )}
     </div>

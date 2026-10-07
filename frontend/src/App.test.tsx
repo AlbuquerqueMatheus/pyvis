@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { EXEMPLOS } from "./exemplos";
@@ -31,10 +31,16 @@ function pythonFalso(opcoes: { travar?: boolean } = {}) {
   return { criar, pedidos };
 }
 
-async function abrirExemplo(titulo: string, criar: ReturnType<typeof pythonFalso>["criar"]) {
+/** A página abre no Prever; os testes do Assistir trocam o modo antes de executar. */
+function escolherAssistir() {
+  fireEvent.click(screen.getByRole("radio", { name: "Assistir" }));
+}
+
+async function abrirExemplo(titulo: string, criar: ReturnType<typeof pythonFalso>["criar"], { assistir = true } = {}) {
   const usuario = userEvent.setup();
   render(<App criarCanal={criar} />);
   await screen.findByText("Python pronto!");
+  if (assistir) escolherAssistir();
   await usuario.selectOptions(screen.getByLabelText("Exemplos:"), String(EXEMPLOS.findIndex((e) => e.titulo === titulo)));
   return usuario;
 }
@@ -84,6 +90,7 @@ describe("App no modo assistir", () => {
     const python = pythonFalso();
     render(<App criarCanal={python.criar} />);
     await screen.findByText("Python pronto!");
+    escolherAssistir();
     // O exemplo da função não está no menu: o aluno digita (aqui, o editor recebe o texto).
     const editor = document.querySelector(".cm-content") as HTMLElement;
     expect(editor).toHaveAttribute("aria-label", "Seu código Python");
@@ -101,6 +108,7 @@ describe("App no modo assistir", () => {
     const python = pythonFalso();
     render(<App criarCanal={python.criar} />);
     await screen.findByText("Python pronto!");
+    escolherAssistir();
     const editor = document.querySelector(".cm-content") as HTMLElement;
     const view = (await import("@codemirror/view")).EditorView.findFromDOM(editor)!;
     // Digitação do aluno: o @uiw/react-codemirror passa a esperar uma pausa antes de aceitar valor de fora.
@@ -136,6 +144,7 @@ describe("App no modo assistir", () => {
       const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<App criarCanal={python.criar} />);
       await screen.findByText("Python pronto!");
+      escolherAssistir();
       await usuario.click(screen.getByRole("button", { name: "▶ Executar" }));
       expect(screen.getByRole("button", { name: "Executando..." })).toBeDisabled();
       await act(async () => vi.advanceTimersByTime(5000));
@@ -149,14 +158,12 @@ describe("App no modo assistir", () => {
 });
 
 describe("App: o modo do uso livre", () => {
-  it("começa no Assistir; o Prever mostra a escolha das perguntas e pede o palpite", async () => {
+  it("começa no Prever, com a escolha das perguntas, e pede o palpite", async () => {
     const { pythonFalso: pythonComPrevisoes } = await import("./testes/pythonFalso");
     const python = pythonComPrevisoes();
-    const usuario = await abrirExemplo("3. Repetição com for", python.criar);
-    expect(screen.getByRole("radio", { name: "Assistir" })).toBeChecked();
-    expect(screen.queryByRole("group", { name: "Perguntas:" })).toBeNull();
-
-    await usuario.click(screen.getByRole("radio", { name: "Prever" }));
+    const usuario = await abrirExemplo("3. Repetição com for", python.criar, { assistir: false });
+    expect(screen.getByRole("radio", { name: "Prever" })).toBeChecked();
+    expect(screen.getByText("Clique em Executar. Antes de ver o resultado, você dá palpites.")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Alternativas" })).toBeChecked();
     await usuario.click(screen.getByRole("radio", { name: "Resposta livre" }));
     await usuario.click(screen.getByRole("button", { name: "▶ Executar" }));
@@ -164,9 +171,10 @@ describe("App: o modo do uso livre", () => {
     expect(python.pedidos[1]).toMatchObject({ acao: "preparar_atividade", dados: { config: { modo: "prever", formato: "livre" } } });
     expect(screen.getByLabelText("Seu palpite").tagName).toBe("TEXTAREA");
 
-    // Trocar o modo esquece a execução: o palpite some e o botão volta.
+    // Trocar o modo esquece a execução: o palpite some, a escolha das perguntas some e o botão volta.
     await usuario.click(screen.getByRole("radio", { name: "Assistir" }));
     expect(screen.queryByText("Antes de rodar")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Perguntas:" })).toBeNull();
     expect(screen.getByRole("button", { name: "▶ Executar" })).toBeEnabled();
   });
 });

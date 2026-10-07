@@ -56,8 +56,8 @@ export function UsoLivre({ criarCanal }: { criarCanal?: CriarCanal }) {
   const motor = useMotor(criarCanal);
   const [codigo, setCodigo] = useState(EXEMPLOS[0].codigo);
   const [entradas, setEntradas] = useState(EXEMPLOS[0].entradas ?? "");
-  // Fora de uma atividade, o padrão é assistir; Prever pede palpites antes de cada passo.
-  const [modo, setModo] = useState<Modo>("assistir");
+  // Prever é o coração do PyVis, então a página já abre nele; Assistir fica a um clique.
+  const [modo, setModo] = useState<Modo>("prever");
   const [formato, setFormato] = useState<Formato>("alternativas");
 
   function escolherExemplo(indice: number) {
