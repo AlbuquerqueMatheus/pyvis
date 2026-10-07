@@ -12,10 +12,121 @@ body {
   @apply bg-fundo text-gray-800 antialiased;
 }
 
+/* Quem pediu menos movimento no aparelho também não vê transições de CSS. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 /* Linha que o Python vai executar no passo atual */
 .cm-linha-atual {
   background-color: rgb(246 173 85 / 0.45);
+  box-shadow: inset 4px 0 0 #c05621;
 }
 .cm-linha-erro {
   background-color: rgb(254 178 178 / 0.7);
+  box-shadow: inset 4px 0 0 #c53030;
+}
+
+/* Ramo que a decisão não tomou: esmaecido, com ícone na margem e a etiqueta 'pulado' */
+.cm-linha-pulada {
+  color: #8a94a6;
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgb(160 174 192 / 0.18) 6px 8px);
+}
+/* O código pulado fica todo cinza (as cores do Python somem), mas a etiqueta continua legível. */
+.cm-linha-pulada span {
+  color: inherit;
+}
+.cm-linha-pulada .cm-rotulo-pulado {
+  margin-left: 0.75em;
+  border: 1px dashed #4a5568;
+  border-radius: 0.375rem;
+  padding: 0 0.4em;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8em;
+  color: #2d3748;
+  background: #fff;
+}
+/* No celular (aba Passos), as linhas puladas viram uma linha só: 'pulado: linhas 4 e 5'. */
+.trecho-pulado {
+  color: #2d3748;
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgb(160 174 192 / 0.25) 6px 8px);
+  border: 1px dashed #4a5568;
+}
+.cm-margem-pulado .cm-gutterElement {
+  min-width: 1.2em;
+  padding: 0 0.15em;
+  text-align: center;
+  color: #4a5568;
+}
+
+/* Balão da decisão: '7 >= 6 → Verdadeiro' */
+.cm-balao {
+  margin-left: 0.75em;
+  border: 2px solid var(--color-secundaria);
+  border-radius: 0.5rem;
+  background: #ebf4ff;
+  padding: 0.05em 0.5em;
+  font-size: 0.9em;
+  color: var(--color-primaria);
+  display: inline-block;
+  max-width: 100%;
+}
+.cm-balao-verdadeiro {
+  color: #276749;
+}
+.cm-balao-falso {
+  color: #9b2c2c;
+}
+.cm-balao-nao-calculado,
+.cm-nao-calculado,
+.cm-nao-calculado span {
+  text-decoration: line-through;
+  text-decoration-style: wavy;
+  text-decoration-color: #718096;
+  color: #718096;
+}
+
+/* O editor não corta o balão de palpite: o arredondado fica na área que rola. */
+.editor-pyvis .cm-editor,
+.editor-pyvis .cm-scroller {
+  border-radius: calc(0.75rem - 1px);
+}
+
+/* Balão de palpite preso à linha (um tooltip do CodeMirror): a moldura é a do próprio balão. */
+.cm-editor .cm-tooltip.cm-balao-previsao {
+  border: none;
+  background: transparent;
+  z-index: 50;
+}
+.cm-editor .cm-balao-previsao.cm-tooltip-below .cm-tooltip-arrow:before {
+  border-bottom-color: var(--color-secundaria);
+}
+.cm-editor .cm-balao-previsao.cm-tooltip-below .cm-tooltip-arrow:after {
+  border-bottom-color: #fff;
+  top: 2px;
+}
+.cm-editor .cm-balao-previsao.cm-tooltip-above .cm-tooltip-arrow:before {
+  border-top-color: var(--color-secundaria);
+}
+.cm-editor .cm-balao-previsao.cm-tooltip-above .cm-tooltip-arrow:after {
+  border-top-color: #fff;
+  bottom: 2px;
+}
+/* O balão no fluxo da página (celular): a seta aponta para a linha logo acima. */
+.balao-seta {
+  position: absolute;
+  top: -9px;
+  left: 1.25rem;
+  width: 16px;
+  height: 16px;
+  transform: rotate(45deg);
+  border-top: 2px solid var(--color-secundaria);
+  border-left: 2px solid var(--color-secundaria);
+  background: #fff;
 }

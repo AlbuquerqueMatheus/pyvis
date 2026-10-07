@@ -1,145 +1,68 @@
-import { useState } from "react";
-import { Editor } from "./componentes/Editor";
-import { Controles } from "./componentes/Controles";
-import { Variaveis } from "./componentes/Variaveis";
-import { CaixaErro } from "./componentes/CaixaErro";
-import { EXEMPLOS } from "./exemplos";
-import { useMotor } from "./motor/useMotor";
-import type { Resultado } from "./motor/tipos";
+import { useEffect } from "react";
+import { MotionConfig } from "motion/react";
+import { Cabecalho } from "./componentes/Cabecalho";
+import { CriarAtividade } from "./componentes/CriarAtividade";
+import { PaginaDaAtividade } from "./componentes/PaginaDaAtividade";
+import { PaginaDosPais } from "./componentes/PaginaDosPais";
+import { UsoLivre } from "./componentes/UsoLivre";
+import type { CriarCanal } from "./motor/ponte";
+import { useRota, type Rota } from "./rotas";
+import { limparVencidas } from "./sala/armazenamento";
 
-const STATUS = {
-  carregando: "Preparando o Python...",
-  pronto: "Python pronto!",
-  executando: "Executando...",
-  falhou: "Não foi possível carregar o Python. Recarregue a página.",
+type Props = { criarCanal?: CriarCanal };
+
+const TITULOS: Record<Rota["tela"], string> = {
+  livre: "PyVis",
+  criar: "Criar atividade · PyVis",
+  pais: "Para pais e responsáveis · PyVis",
+  atividade: "Atividade · PyVis",
+  link_invalido: "Link quebrado · PyVis",
 };
 
-export default function App() {
-  const motor = useMotor();
-  const [codigo, setCodigo] = useState(EXEMPLOS[0].codigo);
-  const [entradas, setEntradas] = useState("");
-  const [resultado, setResultado] = useState<Resultado | null>(null);
-  const [passoAtual, setPassoAtual] = useState(0);
-
-  const passos = resultado?.passos ?? [];
-  const passo = passos[passoAtual];
-  const anterior = passos[passoAtual - 1];
-  const noUltimo = passoAtual === passos.length - 1;
-  const erroVisivel = resultado?.erro && (noUltimo || passos.length === 0) ? resultado.erro : null;
-
-  function mudarCodigo(novo: string) {
-    setCodigo(novo);
-    setResultado(null); // os passos gravados não valem mais para o código novo
-  }
-
-  function escolherExemplo(indice: number) {
-    mudarCodigo(EXEMPLOS[indice].codigo);
-    setEntradas(EXEMPLOS[indice].entradas ?? "");
-  }
-
-  function executar() {
-    const linhas = entradas.split("\n").filter((l) => l !== "");
-    motor.executar(codigo, linhas, (novo) => {
-      setResultado(novo);
-      setPassoAtual(0);
-    });
-  }
-
-  function irPara(indice: number) {
-    setPassoAtual(Math.max(0, Math.min(passos.length - 1, indice)));
-  }
-
+function LinkInvalido({ motivo }: { motivo: string }) {
   return (
     <div className="min-h-screen">
-      <header className="flex items-center justify-between bg-primaria px-4 py-3 text-white shadow">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destaque font-bold text-primaria">Py</div>
-          <h1 className="text-xl font-bold">PyVis</h1>
+      <Cabecalho linkParaInicio />
+      <main className="mx-auto max-w-xl p-4">
+        <div role="alert" className="rounded-xl border-2 border-red-300 bg-red-50 p-4">
+          <p className="text-lg font-bold text-red-800">Este link de atividade não abriu.</p>
+          <p className="mt-1">Peça um link novo ao professor.</p>
+          <p className="mt-3 text-sm text-gray-700">Para o professor: {motivo}.</p>
         </div>
-        <span className="text-sm" aria-live="polite">
-          {motor.aviso ?? STATUS[motor.estado]}
-        </span>
-      </header>
-
-      <main className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-2">
-        <section className="flex min-w-0 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor="exemplos" className="font-semibold">
-              Exemplos:
-            </label>
-            <select
-              id="exemplos"
-              className="rounded-lg border border-gray-300 bg-white px-2 py-1.5"
-              onChange={(e) => escolherExemplo(Number(e.target.value))}
-            >
-              {EXEMPLOS.map((exemplo, i) => (
-                <option key={exemplo.titulo} value={i}>
-                  {exemplo.titulo}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Editor
-            codigo={codigo}
-            aoMudar={mudarCodigo}
-            linhaAtual={passo && passo.evento === "linha" ? passo.linha : null}
-            linhaComErro={erroVisivel?.linha ?? null}
-          />
-
-          <details className="rounded-xl bg-white p-3 shadow-sm" open={entradas !== ""}>
-            <summary className="cursor-pointer font-semibold">Respostas para o input() (uma por linha)</summary>
-            <textarea
-              value={entradas}
-              onChange={(e) => {
-                setEntradas(e.target.value);
-                setResultado(null);
-              }}
-              rows={3}
-              className="mt-2 w-full rounded-lg border border-gray-300 p-2 font-mono"
-              aria-label="Respostas para o input()"
-            />
-          </details>
-
-          <button
-            onClick={executar}
-            disabled={motor.estado !== "pronto"}
-            className="rounded-xl bg-green-600 px-4 py-3 text-lg font-bold text-white shadow transition hover:bg-green-700 disabled:opacity-50"
-          >
-            ▶ Executar
-          </button>
-
-          {resultado && <Controles passo={passoAtual} total={passos.length} fim={passo?.evento === "fim"} irPara={irPara} />}
-        </section>
-
-        <section className="flex min-w-0 flex-col gap-4">
-          {erroVisivel && <CaixaErro erro={erroVisivel} />}
-
-          <div className="rounded-xl bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-bold text-primaria">Variáveis</h2>
-            {passo ? (
-              <>
-                <Variaveis variaveis={passo.globais} anteriores={anterior?.globais} />
-                {passo.funcao && (
-                  <div className="mt-4 rounded-lg border border-dashed border-secundaria p-3">
-                    <h3 className="mb-2 text-sm font-semibold">Dentro da função {passo.funcao}</h3>
-                    <Variaveis variaveis={passo.locais} anteriores={anterior?.funcao === passo.funcao ? anterior.locais : undefined} />
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-gray-500">Clique em Executar para ver o programa rodando passo a passo.</p>
-            )}
-          </div>
-
-          <div className="rounded-xl bg-gray-900 p-4 shadow-sm">
-            <h2 className="mb-2 text-xs uppercase tracking-wider text-gray-400">Saída</h2>
-            <pre className="min-h-16 whitespace-pre-wrap font-mono text-green-300">
-              {resultado ? (noUltimo || !passo ? resultado.saida : passo.saida) : ""}
-            </pre>
-          </div>
-        </section>
+        <a
+          href="#"
+          className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primaria px-4 font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-destaque"
+        >
+          Ir para o PyVis
+        </a>
       </main>
     </div>
+  );
+}
+
+/**
+ * O PyVis inteiro: a tela vem do fragmento da URL (rotas.ts). Só o uso livre e
+ * a atividade carregam o Python; a tela do professor e a dos pais não rodam código.
+ */
+export default function App({ criarCanal }: Props = {}) {
+  const rota = useRota();
+
+  // A limpeza ao abrir (spec 2.5): sala sem uso há 30 dias sai do aparelho.
+  useEffect(() => {
+    limparVencidas();
+  }, []);
+
+  useEffect(() => {
+    document.title = TITULOS[rota.tela];
+  }, [rota.tela]);
+
+  return (
+    <MotionConfig reducedMotion="user">
+      {rota.tela === "livre" && <UsoLivre criarCanal={criarCanal} />}
+      {rota.tela === "criar" && <CriarAtividade />}
+      {rota.tela === "pais" && <PaginaDosPais />}
+      {rota.tela === "atividade" && <PaginaDaAtividade key={rota.fragmento} atividade={rota.atividade} criarCanal={criarCanal} />}
+      {rota.tela === "link_invalido" && <LinkInvalido motivo={rota.motivo} />}
+    </MotionConfig>
   );
 }

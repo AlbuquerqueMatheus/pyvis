@@ -1,0 +1,567 @@
+{
+ "visao": "O PyVis deixa de ser um filme da execução e vira um lugar onde o aluno aprende a pensar como o computador. Ele segue um ciclo único e visível, o PRIMM em pt-BR: Prever → Rodar → Investigar → Modificar → Criar. Em qualquer programa, inclusive o que o aluno acabou de escrever, a ferramenta pede um palpite nos momentos certos ('quanto vai valer total?', 'o if vai entrar?', 'o que aparece na tela?') e só depois mostra o que aconteceu. Quando o palpite erra, o PyVis reconhece a ideia provável por trás dele, porque executa uma versão do programa que segue essa ideia, e mostra a regra na própria execução. Tudo é gerado do rastro, em Python rodando no navegador, sem contas, sem IA generativa e com o código do aluno isolado. O que é revolucionário não é a quantidade de recursos, e sim transformar cada erro em diagnóstico. Cada onda seguinte só entra se servir a uma etapa do ciclo.",
+ "tese_do_tcc": "TESE: dá para adaptar à semântica do Python a ideia de bibliotecas de bugs executáveis (Brown & Burton, 1978). Com isso, um visualizador de programas gera automaticamente, para qualquer programa, perguntas de previsão em pontos intermediários da execução. As alternativas erradas saem da execução do programa transformado por um modelo de concepção equivocada, sempre que o programa torna essa concepção observável. O trabalho mede com que cobertura e com que precisão isso acontece.\n\nCONTRIBUIÇÕES:\n(1) Técnica. Um motor pedagógico em Python, rodando no Pyodide, com:\n- rastro normalizado por comando;\n- avaliador seguro de condições;\n- seleção de pontos de previsão;\n- regra de revelação que impede a interface de entregar a resposta;\n- catálogo de 8 concepções implementadas como ast.NodeTransformer, cada uma declarando em que tipos de pergunta ela é observável.\n(2) Artefato. O PyVis, em pt-BR, sem contas, com o código do aluno isolado, para alunos de 10 a 17 anos.\n(3) Empírica. A cobertura e a plausibilidade dos distratores num corpus de 40 a 60 programas de aula, o que não depende de menores. Se o CEP aprovar a tempo, também dados exploratórios com alunos.\n\nTRABALHOS RELACIONADOS ASSUMIDOS:\n- Myller (2007): o Jeliot 3 já gerava perguntas de previsão sobre atribuições.\n- QLCpy (Lehtinen et al., 2021 e 2023): gera perguntas sobre o código do próprio aluno, com distratores off-by-one.\n- UUhistle (Sorva & Sirkiä): simulação visual com retorno sensível a equívocos.\n- Runestone CodeLens: perguntas de previsão escritas à mão.\n- PLTutor (Nelson et al., 2017): explica cada passo da execução.\nA novidade afirmada é a COMBINAÇÃO de cinco critérios:\n1. distrator produzido por um modelo executável de concepção catalogada;\n2. qualquer programa;\n3. ponto intermediário de uma linha do tempo reversível;\n4. diagnóstico de resposta livre;\n5. público de 10 a 17 anos, em pt-BR.\nO texto do TCC traz uma tabela comparando as ferramentas nesses cinco critérios.\n\nPERGUNTAS:\nQP1 (principal, técnica). Num corpus de 40 a 60 programas típicos de aula, em que fração dos pontos de previsão escolhidos pelo motor pelo menos um modelo de concepção produz um distrator observável e diferente da resposta certa? Quão plausíveis são esses distratores no julgamento de dois professores (kappa de Cohen)?\nQP2 (diagnóstica). Entre as respostas LIVRES erradas dos alunos, que fração coincide com a resposta de algum modelo (cobertura)? Com que precisão, tomando como referência a justificativa curta do aluno codificada por dois avaliadores? Uma concepção só é atribuída quando aparece em 2 ou mais itens.\nQP3 (aprendizagem, exploratória). No mesmo aluno, os itens estudados no modo Prever com diagnóstico têm mais acertos no pós-teste do que os estudados no modo Assistir com narração?\nQP4 (descritiva). Como os alunos percebem o esforço de prever? Que concepções aparecem com mais frequência? A comparação com Swidan et al. (2018), que usaram Scratch e outro instrumento, é só qualitativa.\n\nESCOPO DA AFIRMAÇÃO:\n- A QP3 testa o pacote 'prever + diagnóstico' contra 'assistir + narração'. Ela não isola o efeito do catálogo.\n- A taxonomia de engajamento descreve a atividade do aluno, não a ferramenta. O uso típico do Python Tutor e do Thonny é 'visualização controlada' (Myller et al., 2009). O PyVis torna o nível 'responder' automático e diagnóstico.\n- A QP1 e a QP2 nunca são medidas em múltipla escolha, porque lá a cobertura seria 100% por construção.",
+ "principios": [
+  "Um ciclo só e visível: Prever → Rodar → Investigar → Modificar → Criar (PRIMM em pt-BR). 'Entender' é o feedback dentro de Rodar. Cada recurso pertence a uma única etapa; o recurso que não tem etapa sai.",
+  "Palpite antes de ver, e nada entrega o palpite. Tudo o que vem do futuro do rastro declara de qual pergunta depende e só aparece depois da resposta: total de voltas, ramo não tomado, limites traduzidos do range, efeito da linha. Essa regra fica no motor e é testada.",
+  "O rastro é a matéria-prima: perguntas, distratores, narração e feedback saem do mesmo rastro e da AST, para qualquer programa. O professor escolhe o programa e não escreve perguntas.",
+  "Lógica pedagógica em Python (pyvis_motor), testada com pytest e rodando igual no Pyodide e no servidor. O TypeScript só desenha, anima e confere se um campo já pode aparecer.",
+  "O erro é diagnóstico, não perda. O feedback diz a regra ('o range para antes do último número'), nunca o rótulo técnico da concepção, e vem em camadas. O elogio vai para o processo. Não há sequência de acertos, vidas nem porcentagem durante a atividade.",
+  "Honestidade diagnóstica: quando nenhum modelo explica o erro, o PyVis explica pelo efeito real da linha e não inventa uma concepção. Distrator de regra nunca conta como diagnóstico.",
+  "A atividade decide a tela: o link liga só os recursos da etapa, com um orçamento de no máximo 1 balão e 1 destaque animado por passo.",
+  "Motivar sem manipular e sem imitar jogo de azar: 'palpite', nunca 'aposta'. Sem ranking, pontos, sequência, corações, contadores sociais nem recompensa aleatória.",
+  "O código do aluno é código não confiável: roda isolado numa origem sem dados e sem acesso à rede.",
+  "Privacidade desde o projeto: pseudônimo aleatório, diário sem código, sem entradas e sem texto livre, higiene de literais e comentários em tudo o que sai do aparelho, botão 'apagar deste aparelho' e expiração. Dado pseudonimizado continua sendo dado pessoal (LGPD).",
+  "Python de verdade para todas as idades. O que muda é o andaime (alternativas ou resposta livre, frases curtas), definido pelo link durante as atividades.",
+  "Acessível por padrão: nada indicado só pela cor, tudo operável pelo teclado, prefers-reduced-motion, frases curtas (até 12 palavras na versão padrão) e alvos de toque grandes.",
+  "Medir antes de enfeitar: cada interação relevante vira um evento pseudonimizado, e a tese é decidida por dados do corpus antes da interface."
+ ],
+ "ondas": [
+  {
+   "nome": "Onda 1: Fundação segura do motor (cerca de 2 semanas)",
+   "objetivo": "Corrigir as premissas do tracer que os revisores derrubaram, isolar o código do aluno, preparar o protocolo do worker e medir no corpus, já na semana 1 ou 2, se os distratores por modelo executável têm cobertura suficiente para sustentar a tese. Roda toda no navegador, sem servidor, sobre o código atual (rastreador.py, valores.py, erros.py, worker.ts, useMotor.ts).",
+   "precisa_backend": false,
+   "features": [
+    {
+     "nome": "1.1 Executor isolado: o código do aluno não enxerga nada",
+     "descricao": "Para o aluno, nada muda: ele escreve e executa. Por baixo, o programa roda numa caixa separada, que não vê os dados guardados no aparelho nem consegue mandar nada para a internet. Com import js, o aluno vê 'Esse módulo não está disponível no PyVis'. Com 10**10**9, depois de 5 s aparece 'O programa demorou demais e foi parado', e a página continua funcionando.",
+     "por_que": "As próximas ondas executam código de terceiros: links de atividade, código de colegas na galeria e reexecução no painel do professor. Hoje o worker roda na mesma origem do app, com os builtins completos, e import js funciona. Sem isolamento, um link malicioso poderia ler o diário de outro aluno e mandá-lo para fora.",
+     "evidencias": [
+      "MDN Web Docs, <iframe>, atributo sandbox. https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe",
+      "MDN Web Docs, Content Security Policy (CSP). https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "HOSPEDAGEM: duas origens.\n- O app.\n- O executor (um subdomínio executor. ou um segundo site estático): HTML mínimo + worker + public/pyodide.\n- O executor é servido com CSP \"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; frame-ancestors <origem do app>\". Confirmar se o Pyodide 314 exige mais alguma diretiva.\n- O app carrega <iframe sandbox='allow-scripts allow-same-origin'>. Aqui o allow-same-origin vale para a origem do executor, que é diferente da do app, então o código do aluno não alcança o localStorage nem o IndexedDB do app.\n- Em desenvolvimento, o executor roda numa segunda porta do Vite.\n\nPONTE: novo frontend/src/motor/ponte.ts substitui o new Worker direto no useMotor.ts. Usa postMessage com conferência de event.origin e validação do formato da mensagem.\n\nPYTHON: novo pyvis_motor/seguranca.py.\n- Um finder em sys.meta_path recusa js, pyodide, pyodide_js, _pyodide, micropip e pyodide_http com ImportError amigável.\n- É instalado só durante o exec do aluno, porque o motor já importou o que precisa.\n\nTEMPO LIMITE: 5 s, do lado da página, só para a ação rastrear: terminate e recriação do worker.\n\nSAÍDA: sempre como texto, sem transformar URL em link.\n\nTESTES: tests/test_seguranca.py confere que import js e import pyodide são recusados e que o motor continua funcionando depois. Checagem manual: um código que tenta fetch é bloqueado pela CSP.",
+     "novidade": "Não é novidade: é pré-requisito. O Python Tutor resolve isso executando no servidor; aqui o isolamento é feito no navegador, sem servidor."
+    },
+    {
+     "nome": "1.2 Rastro normalizado por comando (quadro, retorno e voltas)",
+     "descricao": "A linha destacada passa a seguir a ordem real do programa. Uma lista escrita em 3 linhas fica destacada inteira, uma vez, em vez de pular para a linha 2 antes da linha 1. Depois de chamar dobro(4), o passo seguinte mostra 'dobro devolveu 8'. Uma compreensão de lista conta como um passo só, e não como ×4.",
+     "por_que": "Previsões, efeito, decisão, voltas e narração dependem de 'um passo = um comando, no mesmo quadro'. A sonda dos revisores, no Pyodide 3.14.2, achou 6 casos em que isso falha hoje: comando em várias linhas, if com o corpo na mesma linha, chamada dentro da condição, return sem passo próprio, compreensões no 3.12+ (PEP 709) e for encerrado por break. Sem a correção, todo diagnóstico sai errado nesses casos.",
+     "evidencias": [
+      "Python Software Foundation. PEP 709: Inlined comprehensions. https://peps.python.org/pep-0709/",
+      "Documentação do Python, sys.settrace. https://docs.python.org/3/library/sys.html#sys.settrace",
+      "Sorva, J. (2013). Notional Machines and Introductory Programming Education. ACM TOCE 13(2). https://research.aalto.fi/en/publications/notional-machines-and-introductory-programming-education/"
+     ],
+     "esforco": "M",
+     "impacto": 5,
+     "implementacao": "PYTHON, novo pyvis_motor/estrutura.py: analisar(codigo) devolve {comandos: Comando[], linha_para_comando: {linha: id}}.\n\nComando = {id, tipo, linhas, cabecalho, corpo, orelse, corpo_mesma_linha, pai, acumulador}, em que:\n- tipo: 'atrib' | 'aug' | 'if' | 'elif' | 'while' | 'for' | 'print' | 'expr' | 'def' | 'return' | 'break' | 'continue' | 'outro';\n- linhas: [ini, fim];\n- cabecalho, corpo e orelse: [ini, fim] ou null;\n- corpo_mesma_linha: bool;\n- pai: id do bloco que contém o comando, ou null;\n- acumulador: {nome, contador: bool} ou null. Heurística: x = x + ... ou x += ... dentro de um laço; contador quando o incremento é 1. Dispensa a detecção de papéis.\n\nPYTHON, rastreador.py (pós-processamento e tracer):\n(a) Cada evento 'line' é mapeado para um comando. Eventos consecutivos do mesmo comando no mesmo quadro são fundidos, e fica o estado do primeiro. Nomes internos de compreensões são filtrados.\n(b) O evento 'call' atribui quadro = contador sequencial. O passo ganha quadro e profundidade.\n(c) O 'return' de um quadro do aluno anota retorno = {funcao, valor: Valor} no PRÓXIMO passo gravado, sem criar passo visível.\n(d) Novo campo proximo_no_quadro: índice do próximo passo do mesmo quadro, ou null. Efeito e decisão usam esse índice, nunca i+1.\n(e) Voltas: cabeçalho seguido de linha do corpo é uma nova volta; seguido de linha de fora do corpo é a saída do laço; alcançado vindo de fora do corpo é uma nova entrada no laço.\n(f) random.seed(semente) antes do exec. O resultado devolve a semente e deterministico = false se o código importa time, datetime ou secrets.\n\nCONTRATO v2 (Python e tipos.ts):\nResultado = {versao: 2, semente, deterministico, passos: Passo[], saida, erro, estrutura: {comandos}}\nPasso = {i, linha, comando: number|null, evento: 'linha'|'fim', quadro, profundidade, funcao, globais, locais, saida, proximo_no_quadro, retorno?}\nOs campos efeito, decisao, volta, narracao e depende_de entram na Onda 2.\n\nTESTES: tests/test_estrutura.py com os 6 casos dos revisores e os 8 exemplos. Os testes atuais de test_rastreador.py continuam passando, ajustados só onde houver fusão de eventos.",
+     "novidade": "É uma correção de fundação. Nenhum visualizador para iniciantes anota voltas e retorno por quadro."
+    },
+    {
+     "nome": "1.3 Avaliador seguro de condições",
+     "descricao": "É o que permite, na Onda 2, mostrar no if o balão '7 >= 6 → Verdadeiro'. Em 'i < len(l) and l[i] > 0', quando o lado esquerdo é falso, o lado direito aparece marcado como 'nem foi calculado'. Se não for possível mostrar o valor sem risco, o balão diz só 'Verdadeiro'.",
+     "por_que": "Usar eval() em nós 'permitidos' não é seguro. Com numeros = map(int, ...), avaliar max(numeros) no tracer consome o iterador e quebra o programa do aluno, como os revisores reproduziram. O eval() também ignora o curto-circuito e mostraria valores que nunca existiram (equívoco NoShortCircuit).",
+     "evidencias": [
+      "progmiscon.org, catálogo de equívocos de Python (NoShortCircuit e outros). https://progmiscon.org/misconceptions/Python/",
+      "Documentação do Python, módulo ast. https://docs.python.org/3/library/ast.html"
+     ],
+     "esforco": "P",
+     "impacto": 4,
+     "implementacao": "PYTHON, novo pyvis_motor/avaliador.py: avaliar(no_test, f_globals, f_locals) devolve {texto: str|None, valor: bool|None, nao_calculado: [[col_ini, col_fim]]}.\n\nPercorre a AST nó a nó, sem eval e sem compile:\n- Name: só lê valores de tipo EXATO int, float, str, bool, NoneType, list, tuple, dict, set ou range.\n- Constant.\n- Compare encadeado, parando no primeiro falso.\n- BoolOp com curto-circuito, marcando o que não foi calculado.\n- BinOp e UnaryOp só entre tipos seguros, com limite de tamanho para str * int.\n- Subscript só em list, tuple, str ou dict exatos.\n- len, abs, min e max só com argumentos de tipo seguro, nunca iteradores.\n- Qualquer outra coisa: desiste (texto None).\nO repr é cortado em 30 caracteres.\n\nUSO: chamado no tracer, no evento 'line' do cabeçalho de if, elif e while, e gravado em passo['_decisao_bruta'] para a Onda 2.\n\nRAMO: decidido pelo próximo passo do mesmo quadro e pelas faixas de estrutura.py. Se o corpo está na mesma linha do cabeçalho ou há chamada na condição, usa o valor do avaliador; sem valor, o ramo fica 'desconhecido'.\n\nTESTES: tests/test_avaliador.py com map, gerador, defaultdict e um objeto com __getitem__. A saída do programa precisa ser idêntica com e sem anotação, e o curto-circuito tem de aparecer marcado.",
+     "novidade": "O Thonny instrumenta a AST inteira. Aqui um avaliador puro e barato basta para as condições e adianta parte da lupa da Onda 4."
+    },
+    {
+     "nome": "1.4 Protocolo do worker, desempenho e higiene do repositório",
+     "descricao": "Executar responde rápido mesmo no celular, e uma correção nunca é confundida com uma execução. O exemplo 7 passa a perguntar o nome de um robô, não o nome do aluno, e o campo de entradas avisa 'não use seu nome de verdade'. Um erro de variável local dentro de função passa a ter uma explicação correta.",
+     "por_que": "A Onda 2 precisa de várias ações no worker. Hoje há um callback único e um relógio único, então uma resposta pode cair no lugar errado e o relógio de 10 s pode matar uma correção. As decorações do editor são recriadas a cada passo, o que pesa em celular fraco. O UnboundLocalError hoje mostra 'Você usou `esse nome`...', porque o regex não casa no 3.12+. O exemplo 7 coleta o nome real de menores.",
+     "evidencias": [
+      "CodeMirror 6, System Guide: StateField e StateEffect. https://codemirror.net/docs/guide/",
+      "Brasil. Lei nº 13.709/2018 (LGPD), art. 14. https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "PROTOCOLO:\n- Pedido: {id, acao: 'rastrear' | 'preparar_atividade' | 'corrigir', dados}. Resposta: {id, ok, resultado | erro}.\n- useMotor.ts guarda um Map de promessas pendentes.\n- O tempo limite de 5 s vale só para rastrear.\n- preparar_atividade tem orçamento interno de 500 ms: o Python corta e devolve o que tiver.\n- O worker guarda o último resultado em Python (ultimo_resultado), para as ações seguintes não reenviarem o rastro.\n- Duas fases: primeiro o rastro, depois a atividade.\n\nEDITOR: em Editor.tsx, python() e lineWrapping ficam fixos. As decorações do passo vão para um StateField alimentado por um StateEffect irPara, e os widgets implementam eq().\n\nTAMANHO: Variaveis.tsx deixa de fazer JSON.stringify a cada renderização e passa a comparar um hash curto calculado em valores.py (campo 'h' no Valor). Em aparelhos fracos (deviceMemory <= 2), o limite cai para 300 passos.\n\nERROS: em erros.py, o UnboundLocalError é tratado antes do NameError, com o regex r\"local variable '(\\w+)'\" e a mensagem 'Dentro da função, total = ... cria uma variável nova, só da função. Para usar a de fora, passe-a como parâmetro e devolva com return.' Teste em tests/test_erros.py.\n\nEXEMPLOS: exemplos.ts troca o exemplo 7 por 'Qual é o nome do seu robô?'.\n\nCI E VERSÕES:\n- pyproject: requires-python >= 3.12.\n- CI com matriz 3.12, 3.13 e 3.14.\n- Um job que roda o pytest do motor dentro do Pyodide em Node, com um script de cerca de 15 linhas.\n\nHOSPEDAGEM: brotli e Cache-Control longo para /pyodide/. É configuração, não feature.\n\nMEDIÇÃO: tempo de rastrear e de JSON.parse com CPU 6x mais lenta no DevTools e num Android de entrada.",
+     "novidade": "Infraestrutura, sem pretensão de novidade."
+    },
+    {
+     "nome": "1.5 Corpus e sonda de cobertura: o número que decide a tese",
+     "descricao": "Não é uma tela para o aluno. São de 40 a 60 programas típicos das aulas do Matheus (variáveis, if, while, for/range, listas, input), cada um com os pontos de previsão e as concepções aplicáveis rotulados à mão. Um script mede quantos pontos ganham um distrator diagnóstico.",
+     "por_que": "Na sonda dos revisores com os 8 exemplos, 30 dos 35 pontos do tipo 'valor' não ganharam nenhum distrator diagnóstico, 5 ganharam um e nenhum ganhou dois. Esse número decide se a QP1 se sustenta e como os programas do estudo devem ser desenhados para tornar as concepções observáveis. É também o Plano B do TCC, que não depende de menores nem do CEP.",
+     "evidencias": [
+      "Brown, J. S.; Burton, R. R. (1978). Diagnostic models for procedural bugs in basic mathematical skills. Cognitive Science 2(2), 155-192. https://doi.org/10.1207/s15516709cog0202_4",
+      "Swidan, A.; Hermans, F.; Smit, M. (2018). Programming Misconceptions for School Students. ICER 2018. https://research.tudelft.nl/en/publications/programming-misconceptions-for-school-students/",
+      "progmiscon.org. https://progmiscon.org/misconceptions/Python/"
+     ],
+     "esforco": "M",
+     "impacto": 5,
+     "implementacao": "CORPUS: tests/corpus/*.py, com metadados em comentários: # @entradas, # @pontos (comando e tipo) e # @concepcoes.\n\nPYTHON, pyvis_motor/concepcoes.py (esqueleto, completado em 2.3):\n- As 8 transformações.\n- rastrear_leve(codigo, entradas, alvos, semente, limite=200): sem fotos de estado; só conta ocorrências por comando e captura os valores-alvo. É cerca de 50 vezes mais barato.\n\nANÁLISE: analise/cobertura.py gera a tabela por concepção e por tipo de pergunta, com:\n- % de pontos com pelo menos 1 distrator de modelo;\n- % com 2 ou mais;\n- % de alternativas descartadas por serem iguais à certa ou repetidas;\n- tempo de geração.\n\nCRITÉRIO DE DECISÃO, pré-registrado no OSF: se menos de 30% dos pontos de saída, voltas e decisão ganharem distrator de modelo, a tese passa a tratar a cobertura como resultado (e não como premissa), e os programas do estudo são desenhados para tornar as concepções observáveis.\n\nPLAUSIBILIDADE: dois professores julgam uma amostra dos distratores (kappa de Cohen).",
+     "novidade": "Medir, num corpus de aula, a cobertura de distratores gerados por modelos executáveis de concepção é parte da contribuição empírica, e responde à QP1 sem depender de menores."
+    }
+   ]
+  },
+  {
+   "nome": "Onda 2: Prever com diagnóstico (a intervenção do TCC, de 5 a 6 semanas)",
+   "objetivo": "Fazer o PyVis pedir palpites gerados do rastro, explicar o erro pela concepção provável e narrar em texto, sem que nenhuma anotação entregue a resposta. Inclui a distribuição por link e uma versão mínima da sala segura, porque a coleta começa aqui. Ordem de construção: 2.1 → 2.4 → 2.2 → 2.3 → 2.5 → 2.6. O narrador (2.4) vem cedo porque está presente nas duas condições do estudo e precisa estar congelado antes do piloto. Etapas do ciclo: Prever e Rodar. Sem servidor.",
+   "precisa_backend": false,
+   "features": [
+    {
+     "nome": "2.1 Execução que se explica, sem entregar o palpite",
+     "descricao": "No `if nota >= 6:` aparece o balão '7 >= 6 → Verdadeiro'. Só depois que a decisão acontece, o else fica esmaecido, com ícone e a etiqueta 'pulado'. No for, a pílula mostra 'volta 2'; o 'de 4' só aparece quando o laço termina. A caixinha que mudou mostra o novo valor com o antigo riscado ao lado, e o passo depois de uma chamada mostra 'dobro devolveu 8'. Etapa: Rodar.",
+     "por_que": "Swidan et al. (2018), com 145 alunos de 7 a 17 anos em Scratch, encontraram como equívocos mais comuns a sequência das instruções e a ideia de que a variável guarda vários valores. Pea (1986) descreve o bug do paralelismo. Tornar explícitos a decisão, o ramo e a volta mostra a regra que a seta do Python Tutor só sugere. A revelação controlada corrige o que os revisores apontaram: 'volta 2 de 4', o else esmaecido e a contagem total respondiam às perguntas antes do palpite.",
+     "evidencias": [
+      "Swidan, A.; Hermans, F.; Smit, M. (2018). ICER 2018. https://research.tudelft.nl/en/publications/programming-misconceptions-for-school-students/",
+      "Pea, R. D. (1986). Language-Independent Conceptual 'Bugs' in Novice Programming. JECR 2(1). https://doi.org/10.2190/689T-1R2A-X4W4-29J2",
+      "Sorva, J. (2013). ACM TOCE 13(2). https://research.aalto.fi/en/publications/notional-machines-and-introductory-programming-education/"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PYTHON, novo pyvis_motor/anotar.py: anotar(resultado) acrescenta a cada passo:\n- efeito = {criadas: [nome], mudadas: [{nome, escopo: 'global'|'local', antes: Valor, depois: Valor}], saida_nova: str}. É o diff entre passos[i] e passos[proximo_no_quadro], já que o passo i guarda o estado ANTES do comando.\n- decisao = {texto: '7 >= 6' | null, valor: bool|null, ramo: 'corpo'|'orelse'|'sai'|'desconhecido', nao_calculado: [[col_ini, col_fim]]}, vinda do avaliador (1.3).\n- volta = {laco: comando_id, n, total: number|null, total_visivel_desde: índice do passo de saída do laço}.\n\nREGRA DE REVELAÇÃO (no motor):\n- Cada passo ganha depende_de: {campo: [ponto_id]}, por exemplo {'decisao.ramo': ['p4'], 'volta.total': ['p2'], 'efeito': ['p5']}. A atividade (2.2) preenche esse campo.\n- O TS só aplica a função pura visivel(passo, campo, respondidos, passoAtual). Além disso, o ramo pulado só aparece a partir do passo seguinte à decisão, e o total de voltas a partir de total_visivel_desde.\n\nTYPESCRIPT:\n- tipos.ts ganha os novos campos.\n- Editor.tsx, no StateField de 1.4, ganha a linha esmaecida com ícone na margem e o widget inline do balão (aria-hidden; o mesmo conteúdo vai para o narrador).\n- Variaveis.tsx mostra o valor antigo com <del>.\n- Controles.tsx ganha a pílula da volta.\n\nFICAM PARA DEPOIS: contagem ×N na margem, a fileira do iterável e o aviso do while no meio do corpo.\n\nTESTES:\n- tests/test_anotar.py, com os 8 exemplos e os 6 casos de 1.2.\n- tests/test_revelacao.py: para cada ponto do corpus, nenhum campo visível antes da resposta contém o valor ou o texto da resposta.",
+     "novidade": "Python Tutor e Thonny não mostram o ramo pulado nem o número da volta. Aqui as anotações são dados com dependência declarada das perguntas, o que impede que a visualização entregue a resposta."
+    },
+    {
+     "nome": "2.2 Palpites gerados do rastro (modo Prever)",
+     "descricao": "Antes de rodar: 'Qual é o seu palpite? O que vai aparecer na tela?'. Durante o passo a passo, em até 6 momentos, a caixinha vira '?' e um balão pergunta 'Depois desta linha, quanto vale total?', 'O if vai entrar?', 'Quantas voltas o laço vai dar?' ou 'O que aparece na tela?'.\n\nO formato é definido no link, não escolhido pelo aluno durante o estudo. Para 10 a 12 anos, alternativas. Para 13 a 17, resposta livre com dois botões grandes, 'número' e 'texto' (o texto ganha aspas sozinho).\n\nSó depois da resposta a animação mostra o passo. Acertou: ✓ e 'Você lembrou que o range para antes do 5'. Errou: 'Seu palpite: 5. O Python guardou 6.', e entra o Detetive (2.3). O botão 'pular' fica sempre visível. Não há contagem de acertos durante a atividade nem sequência.\n\nOs modos no link são Assistir (o de hoje, mais o narrador) e Prever. Etapa: Prever.",
+     "por_que": "Na meta-análise de Hundhausen et al. (2002), o que o aluno faz com a visualização pesou mais do que o que ela mostra, e a taxonomia de engajamento põe 'responder' acima de 'visualização controlada'. Prever e depois confrontar o resultado gera conflito cognitivo, estratégia proposta por Ma et al. (2011) para remediar modelos errados. Em física, assistir demonstrações sem prever rendeu pouco, e prever antes melhorou o resultado (Crouch et al., 2004). O PRIMM entra como enquadramento pedagógico, não como prova do efeito de prever isolado. Myller (2007) é o precedente direto de perguntas geradas automaticamente.",
+     "evidencias": [
+      "Hundhausen, C. D.; Douglas, S. A.; Stasko, J. T. (2002). A Meta-Study of Algorithm Visualization Effectiveness. JVLC 13(3). https://www.academia.edu/15636659/A_Meta_Study_of_Algorithm_Visualization_Effectiveness",
+      "Myller, N.; Bednarik, R.; Sutinen, E.; Ben-Ari, M. (2009). Extending the Engagement Taxonomy. ACM TOCE 9(1). http://cs.joensuu.fi/pages/int/pub/myller09.pdf",
+      "Myller, N. (2007). Automatic Generation of Prediction Questions during Program Visualization. Electronic Notes in Theoretical Computer Science 178, 43-49.",
+      "Ma, L.; Ferguson, J.; Roper, M.; Wood, M. (2011). Computer Science Education 21(1). https://strathprints.strath.ac.uk/32926/",
+      "Crouch, C. H.; Fagen, A. P.; Callan, J. P.; Mazur, E. (2004). Classroom demonstrations: Learning tools or entertainment? American Journal of Physics 72(6), 835-838.",
+      "Sentance, S.; Waite, J.; Kallia, M. (2019). PRIMM. Computer Science Education 29(2-3). https://eric.ed.gov/?id=EJ1217966"
+     ],
+     "esforco": "G",
+     "impacto": 5,
+     "implementacao": "PYTHON, novo pyvis_motor/previsao.py.\n\npreparar_atividade(resultado, codigo, entradas, config) devolve uma Atividade. config = {modo: 'assistir'|'prever', formato: 'alternativas'|'livre', max_pontos: 6, semente}.\n\nescolher_pontos — os candidatos são os passos i com:\n(a) mudança de variável não trivial, com prioridade ao acumulador ou contador de estrutura.py e às duas primeiras voltas de cada laço;\n(b) decisão de if ou while;\n(c) saída nova;\n(d) saída do laço (pergunta de voltas).\nO ponto ganha +2 se alguma concepção for observável naquele tipo de pergunta (concepcoes.observaveis). Densidade: no máximo 1 ponto a cada 3 passos e 6 por programa, sem repetir o par (tipo, comando).\n\nCONTRATO:\nAtividade = {versao: 1, modo, formato, pontos: Ponto[], depende_de_por_passo: {i: {campo: [ponto_id]}}, cobertura: {pontos_com_modelo, total}}\nPonto = {id: 'p1', passo: i, tipo: 'valor'|'decisao'|'voltas'|'saida', alvo: {nome?, comando}, pergunta, resposta: {texto, tipo_valor: 'numero'|'texto'|'bool'|'lista'}, formato, sensivel_a_tipo: bool, alternativas?: Alternativa[], concepcoes_observaveis: [id]}\nO passo i do ponto é aquele em que a pergunta aparece, quando o aluno tenta avançar.\nAlternativa = {id, texto, certa: bool, concepcao: id|null, origem: 'correta'|'modelo'|'regra', feedback: Feedback|null}\n- São de 3 a 4 alternativas, embaralhadas com a semente.\n- As de origem 'regra' (valor antigo, ±1, valor de outra variável) têm concepcao null e nunca contam como diagnóstico.\n- Pontos sensíveis a tipo (texto vindo de input) são sempre de alternativas para 10 a 12 anos.\n\ncorrigir(ponto_id, {texto, tipo_escolhido}) é uma ação do worker, só para resposta livre (a múltipla escolha já vem corrigida na Atividade).\n- Com 'número', normaliza com ast.literal_eval; com 'texto', compara a string.\n- Devolve Correcao = {certa, valor_certo, tipo_certo, concepcao, feedback}.\n- Valor certo com tipo errado gera uma mensagem pedagógica e só conta como 'input devolve número' se o aluno marcou 'número'.\n- 7 contra 7.0 gera mensagem, não diagnóstico.\n\nTYPESCRIPT:\n- Novo BalaoPrevisao.tsx intercepta irPara quando o passo atual é um ponto sem resposta, e o autoplay pausa.\n- Variaveis.tsx mostra a caixinha '?'.\n- Teclado: as teclas de 1 a 4 escolhem a alternativa, Enter confirma e o foco é gerenciado.\n- aria-live só no feedback.\n\nREGISTRO: cada resposta vira um evento Prediction (2.5).\n\nTESTES: tests/test_previsao.py, com os pontos esperados nos exemplos e no corpus, a densidade e a normalização das respostas.",
+     "novidade": "Myller (2007) gerava perguntas sobre atribuições em Java. O QLCpy pergunta sobre o código do aluno depois da execução. O CodeLens usa perguntas escritas à mão. Aqui as perguntas são geradas em pontos intermediários da linha do tempo de qualquer programa, com alternativas vindas de modelos de concepção e revelação controlada."
+    },
+    {
+     "nome": "2.3 Detetive: concepções como modelos executáveis observáveis",
+     "descricao": "Quando o palpite erra: 'Você respondeu 5 voltas, como se o range(1, 5) chegasse até o 5. O range para ANTES do último número.' O aluno abre as camadas se quiser:\n(1) Onde olhar: a linha do tempo vai ao passo, e a caixinha certa ganha um contorno.\n(2) A regra, explicada com os valores da execução.\n(3) Me mostra: o passo resolvido.\n\nO aluno nunca vê o nome técnico nem o id da concepção. Quando nenhum modelo explica o erro, o feedback é honesto e se baseia no efeito real: 'O Python guardou 6 porque total valia 3 e numero valia 3.' Etapa: Rodar.",
+     "por_que": "Concepções equivocadas são modelos coerentes, mas errados, e pedem intervenção direcionada (Qian & Lehman, 2017). Em Qian & Lehman (2019), o feedback direcionado aumentou as soluções melhoradas de 34% para 45%. O estudo teve 23 alunos de alta habilidade num programa de férias, em Java, então vale como indício e não como prova para este público. O feedback funciona quando é específico e dado na hora certa (Shute, 2008). Apenas reescrever mensagens de erro tem evidência mista (Becker et al., 2019), por isso aqui o feedback é ligado à execução. A base conceitual é a do bug executável (Brown & Burton, 1978).",
+     "evidencias": [
+      "Qian, Y.; Lehman, J. (2017). ACM TOCE 18(1). https://doi.org/10.1145/3077618",
+      "Qian, Y.; Lehman, J. D. (2019). SAGE Open. https://journals.sagepub.com/doi/full/10.1177/2158244019885136",
+      "Shute, V. J. (2008). Focus on Formative Feedback. Review of Educational Research 78(1). https://eric.ed.gov/?id=EJ787077",
+      "Becker, B. A. et al. (2019). Compiler Error Messages Considered Unhelpful. ITiCSE WG. https://iticse19-wg10.github.io/",
+      "Brown, J. S.; Burton, R. R. (1978). Cognitive Science 2(2). https://doi.org/10.1207/s15516709cog0202_4",
+      "Cortinovis, R.; Frank Bolton, P.; Caceffo, R. (2023). EDUCOMP 2023. https://sol.sbc.org.br/index.php/educomp/article/view/23880"
+     ],
+     "esforco": "G",
+     "impacto": 5,
+     "implementacao": "PYTHON, pyvis_motor/concepcoes.py.\n\nConcepcao = {id, regra_para_aluno (até 12 palavras), camadas: {onde, regra (modelo de frase com {valores}), resolvido}, transformar: NodeTransformer|None, regra_rastro: função|None, observavel_em: ['voltas'|'saida'|'valor'|'decisao'], padrao_ast: função, referencias}.\n\nCATÁLOGO (8), priorizado a partir de Swidan (2018), Qian & Lehman (2017), progmiscon e Cortinovis (2023):\n- C01 range-inclui-fim: range(a, b) → range(a, b + 1).\n- C02 range-comeca-em-1: range(n) → range(1, n + 1).\n- C03 input-e-numero: um input(...) que não esteja dentro de int() ou float() vira _num(input(...)).\n- C04 atribuicao-nao-muda: congela a atribuição alvo naquela ocorrência.\n- C05 else-tambem-roda: corpo e orelse executados em sequência.\n- C06 while-vigia-condicao: insere 'if not (cond): break' depois de cada comando do corpo. Só é observável quando a condição fica falsa no meio do corpo.\n- C07 indice-comeca-em-1: lista[i] em leitura vira lista[i - 1].\n- C08 divisao-inteira: a / b entre ints vira a // b.\n\nEXECUÇÃO:\n- Cada transformação roda UMA vez por programa, e só se padrao_ast encontrar a construção.\n- Usa rastrear_leve, com limite de 200 passos e a mesma semente e entradas. Se estourar o limite, a concepção fica sem alternativa.\n- O alinhamento é por (comando, ocorrência).\n- Alternativas iguais à certa ou repetidas são descartadas.\n- Programas não determinísticos não geram alternativas de modelo.\n\ndiagnosticar(ponto, resposta) devolve uma concepção só quando um único modelo coincide com a resposta.\n\nFeedback = {onde: {passo, destacar: nome|null}, regra: str, resolvido: str}.\n\nFORA DESTA ONDA: lâmpada de alertas silenciosos (vai para 4.7), quadrado fantasma do IndexError e personagem Py.\n\nTYPESCRIPT: PainelDetetive.tsx com 3 botões de camada; cada uso vira um evento Feedback.Layer.\n\nTESTES: para cada concepção, programas positivos (que geram o distrator) e negativos (que não geram). Precisão e revocação entram na QP1.",
+     "novidade": "Bibliotecas de bugs executáveis existem desde o BUGGY, para aritmética. O que não aparece em Python Tutor, Thonny, QLCpy, UUhistle nem CodeLens é a combinação: adaptá-las à semântica do Python via AST, dentro de um visualizador com linha do tempo, declarando a observabilidade de cada concepção e gerando distratores para pontos intermediários de qualquer programa."
+    },
+    {
+     "nome": "2.4 Narrador em texto",
+     "descricao": "Embaixo dos controles aparece uma frase curta, de até 12 palavras: 'total recebe total + numero: agora vale 6.', 'nota >= 6? 7 >= 6, Verdadeiro: entra no if.', 'input devolve texto: chegou \"11\".'. O botão 'Mais detalhes' mostra a versão longa.\n\nEnquanto há uma pergunta pendente sobre um laço, a leitura fica literal ('para cada numero em range(1, 5)'); a tradução ('de 1 até 4') só aparece depois. Com o balão de palpite aberto, o narrador não mostra o efeito. Não há voz nesta onda.\n\nO narrador é a camada 2 do Detetive e está presente nas DUAS condições do estudo. Etapa: Rodar.",
+     "por_que": "A narração torna explícitas as regras da máquina nocional (Sorva, 2013) e descreve cada passo como uma ação mecânica, contra o superbug de achar que o computador entende a intenção (Pea, 1986). Ler '=' como 'recebe' ataca a confusão entre atribuição e igualdade. O PLTutor, que explica cada passo, é precedente, mas veio de um estudo pequeno com alunos de CS1 autosselecionados. As frases são curtas porque o público inclui leitores pouco fluentes.",
+     "evidencias": [
+      "Sorva, J. (2013). ACM TOCE 13(2). https://research.aalto.fi/en/publications/notional-machines-and-introductory-programming-education/",
+      "Pea, R. D. (1986). https://doi.org/10.2190/689T-1R2A-X4W4-29J2",
+      "Nelson, G. L.; Xie, B.; Ko, A. J. (2017). Comprehension First. ICER 2017. https://par.nsf.gov/biblio/10107748-comprehension-first-evaluating-novel-pedagogy-tutoring-system-program-tracing-cs1"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PYTHON, novo pyvis_motor/narrador.py:\n- ler_comando(comando) é calculado UMA vez por comando, a partir da AST, em duas versões: literal e traduzida.\n- narrar(passo, resultado) é calculado por passo para cerca de 10 construções (Assign, AugAssign, If/elif, While, For, print, input, def, return e chamada), com uma frase genérica de reserva. Usa efeito, decisão, volta e retorno.\n- Reaproveita NOMES_DE_TIPO de erros.py.\n\nCONTRATO:\n- estrutura.comandos[k].leitura = {literal, traduzida, traduzida_depende_de: [ponto_id]}\n- passo.narracao = {curta, longa}. O TS esconde o efeito enquanto o ponto do passo estiver pendente (depende_de['efeito']).\n\nTYPESCRIPT:\n- Narracao.tsx com aria-live='polite', disparado só quando o aluno avança.\n- Setas do teclado em Controles.tsx.\n- MotionConfig reducedMotion='user' envolvendo o app.\n\nTESTES: snapshot das frases, versão curta com até 12 palavras e teste de não-vazamento junto com test_revelacao.py.",
+     "novidade": "Python Tutor e Thonny não narram os passos. Aqui as frases são geradas da AST e dos valores reais, em pt-BR, e sincronizadas com a regra de revelação."
+    },
+    {
+     "nome": "2.5 Atividade por link, sala mínima segura e diário pseudonimizado",
+     "descricao": "O professor clica em 'Criar atividade' e escolhe os programas (exemplos pelo id ou código próprio), as entradas, o modo, o formato das perguntas e se a atividade é do estudo. Recebe um link.\n\nO aluno abre o link e:\n- lê uma tela de 3 frases ilustradas: 'O professor vê suas respostas desta aula. Não pedimos seu nome. Você pode apagar tudo deste aparelho.';\n- recebe um apelido gerado, como 'Tucano Azul 7', que pode trocar por outro da lista;\n- digita o código da sala e faz a atividade.\n\nNo fim, 'Meu resumo' mostra 'ideias que você já entendeu' e 'ideias para revisar', com as ideias antes de qualquer número. 'Entregar ao professor' baixa um arquivo; com a Onda 3 pronta, a entrega é automática. O botão 'Sair e apagar deste aparelho' fica sempre visível, e há uma página para os pais.",
+     "por_que": "A avaliação formativa só funciona quando a evidência chega a quem decide o próximo passo do ensino (Black & Wiliam, 1998). Eventos num formato inspirado no ProgSnap2 permitem comparar com a literatura. A LGPD (art. 14, §6º) exige informação adequada à idade, e dado pseudonimizado continua sendo dado pessoal para quem consegue reidentificá-lo. Como a coleta começa nesta onda, a versão mínima da sala segura não pode esperar a Onda 6.",
+     "evidencias": [
+      "Black, P.; Wiliam, D. (1998). Assessment in Education 5(1). https://assess.ucr.edu/sites/default/files/2019-02/blackwiliam_1998.pdf",
+      "Price, T. W. et al. (2020). ProgSnap2. ITiCSE 2020. https://isnap.csc.ncsu.edu/home/public/publication/price-2020-i-ti-cse/",
+      "Brasil. LGPD, art. 14. https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+      "ANPD. Enunciado CD/ANPD nº 1/2023. https://bibliotecadigital.mj.gov.br/bitstream/1/10215/2/Enunciado_ANPD_2023_1.html"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "LINK:\n- Exemplos vão pelo id: #a=ex3&m=prever&f=alt.\n- Código novo vai comprimido com lz-string (compressToEncodedURIComponent) no fragmento da URL, que não é enviado a nenhum servidor.\n- Antes do piloto, medir o tamanho máximo aceito no chat do Meet; acima dele, a atividade vai como arquivo.\n\nCONTRATO DA ATIVIDADE: AtividadeLink = {v: 1, id, programas: [{ex: 'ex3'} | {codigo, entradas}], modo: 'assistir'|'prever'|'estudo', formato: 'alternativas'|'livre', sala, semente}.\nNo modo 'estudo', sortear_condicoes(sujeito, atividade) atribui a cada programa Prever ou Assistir, balanceado e determinístico pela semente.\n\nPYTHON:\n- pyvis_motor/apelido.py: gerar(semente), com listas fechadas de animal, cor e número, e validar().\n- pyvis_motor/registro.py: esquema de eventos e resumo(eventos).\n- pyvis_motor/privacidade.py: higienizar(codigo) usa tokenize para remover comentários e trocar literais de texto e f-strings por '<texto>'. É obrigatória em qualquer código que saia do aparelho.\n\nCONTRATO DO EVENTO: Evento = {v: 1, ts, sala, sujeito (UUID aleatório por sala), atividade, programa, condicao, tipo, code_hash, ponto?, formato?, resposta?: {alternativa?, valor_normalizado?, tipo_escolhido?}, certa?, concepcao?, camada?: 1|2|3, ms?}.\n- tipo: 'Session.Start' | 'Run.Program' | 'Step' | 'Prediction' | 'Prediction.Skip' | 'Feedback.Layer' | 'Error'.\n- O evento nunca contém código, entradas, texto livre nem apelido.\n\nARMAZENAMENTO:\n- Memória, com cópia em localStorage (sempre dentro de try/catch), por sala.\n- Expira em 30 dias, com limpeza ao abrir.\n- Fora de uma sala, nada é salvo.\n\nENTREGA: um arquivo .json (lz-string) baixado. Reserva: o código colado num formulário sem login e sem coleta de e-mail. Nunca pelo chat do Meet.\n\nTYPESCRIPT: CriarAtividade.tsx, Entrada.tsx (aviso e apelido), MeuResumo.tsx e a página /pais. A tela Entregas.tsx é substituída por scripts em analise/ (Onda 3).",
+     "novidade": "Permite um estudo com menores, sorteado por item dentro de cada aluno, sem contas e sem servidor, com a condição experimental embutida no link."
+    },
+    {
+     "nome": "2.6 Tela da atividade: orçamento de atenção, celular e acessibilidade",
+     "descricao": "A atividade decide a tela. No modo Prever aparecem só o editor, as caixinhas, a linha do tempo, um balão e o narrador, e nada pisca enquanto o palpite está aberto. No celular há duas abas, Código e Passos, a linha do tempo fica fixa embaixo, o balão flutua sobre a linha atual e os alvos de toque têm 44 px. Todo estado tem ícone e texto além da cor: ✓ certo, ✗ errado, 'pulado'.",
+     "por_que": "Muitos estímulos simultâneos dividem a atenção e sobrecarregam a memória de trabalho (Sweller, 1988), justamente no público com menos fluência de leitura. O celular é o principal aparelho de acesso para 98% dos usuários de 9 a 17 anos (TIC Kids Online Brasil 2024). Informação só por cor exclui daltônicos (WCAG 1.4.1), e animações precisam respeitar a preferência do aparelho (WCAG 2.3.3).",
+     "evidencias": [
+      "Sweller, J. (1988). Cognitive load during problem solving. Cognitive Science 12(2), 257-285.",
+      "Cetic.br (2025). TIC Kids Online Brasil 2024: Resumo Executivo. https://cetic.br/media/docs/publicacoes/2/20250512154015/tic_kids_online_2024_resumo_executivo.pdf",
+      "W3C. WCAG 2.2, critério 1.4.1 (Use of Color). https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html",
+      "W3C. WCAG 2.2, critério 2.3.3. https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PALCO: um componente Palco.tsx monta só o que atividade.modo permite. A regra do orçamento (no máximo 1 balão e 1 destaque animado por passo) é testada com Vitest e Testing Library.\n\nLAYOUT: responsivo em Tailwind, com abas abaixo do breakpoint lg. Na semana 1, perguntar aos alunos em que aparelho assistem às aulas. Se ninguém usar celular, o layout móvel se limita a não quebrar.\n\nMOVIMENTO: Motion com reducedMotion='user'; nada pisca mais de 3 vezes por segundo.\n\nACESSIBILIDADE: alvos de pelo menos 24 px no desktop e 44 px no toque. Antes do piloto, testar com NVDA e com um simulador de daltonismo.",
+     "novidade": "Não é novidade; é o que torna a intervenção usável pelo público real."
+    }
+   ]
+  },
+  {
+   "nome": "Onda 3: Kit do estudo (cerca de 1,5 semana, em paralelo à espera do CEP)",
+   "objetivo": "Garantir que os dados cheguem sem depender de criança copiando e colando, e preparar instrumentos e análise válidos. O servidor é mínimo: só acrescenta eventos pseudonimizados e nunca executa código.",
+   "precisa_backend": true,
+   "features": [
+    {
+     "nome": "3.1 Coleta mínima só de acréscimo",
+     "descricao": "Ao terminar a atividade, o aluno vê 'Entregue ✓' sem precisar copiar nada. Se a internet falhar, o arquivo da 2.5 é a reserva.",
+     "por_que": "No plano anterior, copiar e colar era o elo mais frágil do TCC. Um endpoint pequeno resolve isso e já é o embrião da Onda 6.",
+     "evidencias": [
+      "Price, T. W. et al. (2020). ProgSnap2. https://isnap.csc.ncsu.edu/home/public/publication/price-2020-i-ti-cse/",
+      "Brasil. LGPD, art. 14. https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm"
+     ],
+     "esforco": "P",
+     "impacto": 4,
+     "implementacao": "SERVIDOR: servidor/coleta.py, FastAPI com cerca de 80 linhas.\n- POST /eventos recebe um lote, valida pelo esquema de registro.py e só acrescenta (JSONL ou SQLite).\n- Exige um token da sala, limita o tamanho e aceita CORS só da origem do app.\n- Uvicorn roda sem log de acesso, para não guardar IP.\n- Não há leitura pública; a exportação é por uma rota protegida.\n\nCONSENTIMENTO: o professor NÃO marca quem consentiu. O orientador (um terceiro) guarda a lista de pseudônimos com TCLE e TALE e filtra a exportação depois das aulas.\n\nHOSPEDAGEM: preferir um provedor com dados no Brasil ou registrar a transferência internacional no RIPD.",
+     "novidade": "Infraestrutura mínima, sem pretensão de novidade."
+    },
+    {
+     "nome": "3.2 Instrumentos e análise reproduzível",
+     "descricao": "Pré-teste e pós-teste curtos, de 6 a 8 itens e no máximo 10 minutos, aplicados como atividade normal da aula, em papel ou num formulário sem login.\n- Formas A e B equivalentes, com itens isomorfos por conceito.\n- Itens em outro formato (completar uma tabela de rastreio, achar o bug) medem transferência.\n- O questionário usa o mesmo instrumento para todas as idades, mais uma pergunta de escolha forçada: 'em qual modo você prefere estudar?'.",
+     "por_que": "Itens escritos pelo desenvolvedor no mesmo formato da intervenção favorecem Prever, então é preciso pilotar os itens e incluir outros formatos. O ganho normalizado de Hake calculado por aluno é instável em testes curtos (Nissen et al., 2018). O Smileyometer tem efeito teto em crianças (Read, 2008), e escalas diferentes por idade impedem comparar as faixas.",
+     "evidencias": [
+      "Lister, R. et al. (2004). A Multi-National Study of Reading and Tracing Skills in Novice Programmers. ITiCSE WG. https://cseweb.ucsd.edu//~bsimon/pubs/abstracts/iticse2004wg.html",
+      "Nissen, J. M. et al. (2018). Comparison of normalized gain and Cohen's d for analyzing gains on concept inventories. Physical Review PER 14, 010115.",
+      "Read, J. C. (2008). Validating the Fun Toolkit. Cognition, Technology & Work 10(2). https://link.springer.com/article/10.1007/s10111-007-0069-9"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "ITENS E GABARITO: analise/itens/*.toml guarda o código de cada questão. analise/gabarito.py roda rastrear para obter o gabarito, o que elimina erro de gabarito manual.\n\nMÉTRICAS: analise/metricas.py, testado com pytest, calcula:\n- KR-20, dificuldade e discriminação dos itens no piloto;\n- modelo misto logístico: acerto ~ condição + pré-teste + faixa etária + (1|aluno) + (1|item), com statsmodels BinomialBayesMixedGLM ou lme4 via R;\n- d de Cohen com intervalo de confiança;\n- g de Hake só como descritivo;\n- cobertura e precisão para a QP1 e a QP2.\n\nNOTEBOOK: analise/estudo.ipynb, reproduzível. A Onda 6 generaliza este kit para replicações.",
+     "novidade": "Gabarito calculado pelo próprio motor e análise pré-registrada; não há pretensão de novidade."
+    }
+   ]
+  },
+  {
+   "nome": "Onda 4: Investigar a máquina (depois do estudo)",
+   "objetivo": "Levar o aluno à etapa Investigar: interrogar a execução, mudar o passado e enxergar funções e memória. Cada recurso reaproveita o rastro da Onda 1 e a regra de revelação. Sem servidor; fica no texto do TCC como evolução, com estudos menores e independentes.",
+   "precisa_backend": false,
+   "features": [
+    {
+     "nome": "4.1 Lupa de expressões",
+     "descricao": "Em total = total + numero, a lupa mostra total + numero → 0 + numero → 0 + 1 → 1. Num and cujo lado esquerdo é falso, o lado direito fica cinza com a etiqueta 'nem foi calculado'. A lupa é opcional (Shift+→ entra nos sub-passos). Etapa: Investigar.",
+     "por_que": "Muitos equívocos vêm da ordem de avaliação: achar que a variável guarda a fórmula, que chamadas aninhadas rodam de fora para dentro ou que and e or sempre calculam os dois lados (progmiscon). O Thonny mostra que a técnica funciona.",
+     "evidencias": [
+      "Código-fonte do Thonny, cp_tracers.py. https://github.com/thonny/thonny/blob/master/thonny/plugins/cpython_backend/cp_tracers.py",
+      "progmiscon.org. https://progmiscon.org/misconceptions/Python/"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "PYTHON: pyvis_motor/instrumentador.py, um NodeTransformer que embrulha cada expressão em contexto Load como __pv_valor(ID, expr). Ficam de fora, no começo, compreensões, lambdas e f-strings. Limite de 40 micro-eventos por linha. O passo ganha micro = {etapas, nos}.\n\nTESTES: teste de equivalência mostrando que passos, saída e erros não mudam com a instrumentação.\n\nTYPESCRIPT: LupaExpressao.tsx.",
+     "novidade": "O Thonny faz isso no desktop. Aqui é na web, numa linha do tempo reversível, e os micro-eventos alimentam previsões."
+    },
+    {
+     "nome": "4.2 'Por quê?' e perguntas de investigação",
+     "descricao": "Clicando em total = 10: 'total virou 10 na linha 3, na volta 4, porque total era 6 e numero era 4'. Numa linha que não rodou: 'Por que a linha 5 não rodou? Porque nota >= 6 deu 5 >= 6 → Falso'. A aba Investigar traz perguntas automáticas ('Quantas vezes a linha 3 rodou até agora?'), e a contagem ×N na margem é sempre cumulativa até o passo atual.",
+     "por_que": "Com o Whyline, em que se pergunta 'por quê?' diretamente sobre o que se viu, novatos foram mais rápidos numa tarefa de depuração (Ko & Myers, 2008). Perguntas automáticas sobre o próprio código revelaram conhecimento frágil: 27% dos alunos com solução correta erraram pelo menos uma (Lehtinen et al., 2023).",
+     "evidencias": [
+      "Ko, A. J.; Myers, B. A. (2008). ICSE 2008. https://faculty.washington.edu/ajko/papers/Ko2008JavaWhyline.pdf",
+      "Lehtinen, T.; Seppälä, O.; Korhonen, A. (2023). Automated Questions About Learners' Own Code Help to Detect Fragile Prerequisite Knowledge. ITiCSE 2023. https://arxiv.org/abs/2306.16267",
+      "Lehtinen, T.; Santos, A. L.; Sorva, J. (2021). Let's Ask Students About Their Programs, Automatically. arXiv:2103.11138. https://arxiv.org/abs/2103.11138"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PYTHON:\n- pyvis_motor/proveniencia.py: de_onde_veio(passo, var) e por_que_nao_rodou(linha), usando leituras (de 4.1, ou nomes da AST na versão reduzida), o efeito e o mapa de blocos.\n- pyvis_motor/perguntas.py: perguntas de investigação a partir do rastro.\n\nWORKER: ação sob demanda 'porque', sobre o ultimo_resultado.\n\nTYPESCRIPT: CorrenteCausal.tsx e Investigar.tsx.",
+     "novidade": "Nenhum visualizador de Python para iniciantes responde 'de onde veio este valor?'. Aqui a resposta sai do rastro, em pt-BR."
+    },
+    {
+     "nome": "4.3 E se...? (linha do tempo alternativa)",
+     "descricao": "Com a execução pausada, o aluno troca nota = 5 por 6 e aperta 'E se?'. Aparecem duas linhas do tempo, 'o que aconteceu' e 'e se', com o ponto onde se separam e as saídas lado a lado. A diferença também é indicada por texto ('antes' e 'e se'), não só por cor. Etapas: Investigar e Modificar.",
+     "por_que": "Entrar com dados aumentou a discussão entre os alunos (Myller et al., 2009). O recurso treina o raciocínio de causa e efeito nas fronteiras (>= contra >).",
+     "evidencias": [
+      "Myller, N. et al. (2009). ACM TOCE 9(1). http://cs.joensuu.fi/pages/int/pub/myller09.pdf"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "PYTHON:\n- rastrear(..., intervencao={passo, nome, valor}): o valor é lido com ast.literal_eval e escrito em frame.f_globals ou frame.f_locals. Os revisores confirmaram que isso funciona já no 3.12.\n- Mesma semente da execução original.\n- pyvis_motor/comparar.py devolve o primeiro passo divergente, as linhas executadas só em cada lado e o difflib da saída.\n\nTYPESCRIPT: LinhaDoTempoDupla.tsx.",
+     "novidade": "Nem o Python Tutor nem o Thonny permitem alterar o estado no meio da execução e comparar as duas execuções."
+    },
+    {
+     "nome": "4.4 Funções e memória em níveis",
+     "descricao": "Chamar dobro(5) abre um cartão 'dobro (chamada nº 1)', e o 5 viaja até o parâmetro n. A memória tem três níveis: caixinhas → etiquetas (depois de b = a, a mesma lista com as etiquetas a e b) → setas. Quando o rastro detecta um apelido, aparece o convite 'a e b agora são a MESMA lista. Quer ver as etiquetas?'. Há sempre uma descrição em texto ('a e b são a mesma lista [1, 2, 3]').",
+     "por_que": "Funções e referências são onde os modelos mentais quebram (du Boulay, 1986; Ma et al., 2011). Com crianças, a metáfora da etiqueta evitou melhor que a da caixa a ideia de que a variável guarda vários valores (Hermans et al., 2018). Mostrar só o que o programa exige dirige a atenção (Fincher et al., 2020).",
+     "evidencias": [
+      "du Boulay, B. (1986). JECR 2(1). https://doi.org/10.2190/3LFX-9RRF-67T8-UVK9",
+      "Hermans, F. et al. (2018). WiPSCE 2018. https://pure.tudelft.nl/ws/files/47760609/box_label_vars.pdf",
+      "Fincher, S. et al. (2020). ITiCSE WG. https://doi.org/10.1145/3437800.3439202"
+     ],
+     "esforco": "G",
+     "impacto": 4,
+     "implementacao": "PYTHON:\n- O passo ganha pilha = [{quadro, funcao, linha, locais}], subindo por f_back.\n- valores.py passa a usar referências {ref: n} para mutáveis, com um mapa id → número sequencial e uma lista de objetos vivos (para o CPython não reaproveitar ids).\n- Novos campos memoria, apelidos e nivel_sugerido.\n- A concepção 'a atribuição copia a lista' entra no catálogo: b = a vira b = a.copy().\n\nTYPESCRIPT: Pilha.tsx e Memoria.tsx, com as setas SVG marcadas aria-hidden e o texto equivalente.",
+     "novidade": "Os novos elementos são o nível intermediário de etiquetas e a progressão disparada no momento em que o motor detecta um apelido."
+    },
+    {
+     "nome": "4.5 Papéis das variáveis e história da variável",
+     "descricao": "Cada caixinha ganha um ícone e um texto com o papel da variável, detectado automaticamente (contador, acumulador, maior até agora, valor mais recente, valor fixo, bandeira). Clicando, abre-se a história: total: 0 → 1 → 3 → 6.",
+     "por_que": "Em Sajaniemi & Kuittinen (2005), com 91 universitários, o grupo que aprendeu com papéis e animação de papéis foi melhor nas tarefas de construção de programas. A cobertura de cerca de 99% das variáveis de programas de iniciantes por dez papéis vem de Sajaniemi (2002).",
+     "evidencias": [
+      "Sajaniemi, J.; Kuittinen, M. (2005). Computer Science Education 15(1). https://saja.kapsi.fi/var_roles/abstracts/didinf05.pdf",
+      "Sajaniemi, J. (2002). An empirical analysis of roles of variables in novice-level procedural programs. IEEE HCC 2002.",
+      "Gerdt, P.; Sajaniemi, J. (2004). Program Visualization Workshop 2004. https://www.dcs.warwick.ac.uk/pvw04/p13.pdf"
+     ],
+     "esforco": "P",
+     "impacto": 3,
+     "implementacao": "PYTHON: pyvis_motor/papeis.py combina padrões da AST com confirmação no histórico do rastro. Só mostra papéis de alta confiança.\n\nAVALIAÇÃO: um corpus rotulado de mais de 30 programas mede a acurácia da detecção, um estudo pequeno e independente.",
+     "novidade": "Nenhum visualizador atual de Python mostra papéis detectados ao vivo no código do aluno."
+    },
+    {
+     "nome": "4.6 Teste de mesa e modo Desafio",
+     "descricao": "A aba 'Teste de mesa' mostra a tabela do quadro (linha executada, variáveis, condição V/F, saída), sincronizada com a linha do tempo. No modo 'Eu preencho', as células que mudam vêm vazias, e o aluno se move entre elas com Tab. O modo Desafio pede para prever toda mudança. Depois de 2 tentativas aparece 'Me mostra', sem penalidade. Ambos ficam limitados a programas de até cerca de 30 passos, com a opção 'pular para o fim do laço' depois de 2 voltas. Não há cronômetro.",
+     "por_que": "Uma estratégia explícita de rastreamento com tabela de memória melhorou o desempenho em rastreamento (Xie, Nelson & Ko, 2018). O aluno, porém, precisa entender para que serve a simulação (Sorva et al., 2013). Sem saída, uma criança travada abandona, por isso o 'Me mostra'.",
+     "evidencias": [
+      "Xie, B.; Nelson, G. L.; Ko, A. J. (2018). SIGCSE 2018. https://www.benjixie.com/publication/sigcse-2018/",
+      "Sorva, J.; Lönnberg, J.; Malmi, L. (2013). Computer Science Education 23(3). https://eric.ed.gov/?id=EJ1023094"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PYTHON: pyvis_motor/tabela.py com tabela_de_rastreio(resultado, compacta) e conferir(tabela, respostas). Reaproveita corrigir e diagnosticar da Onda 2.\n\nTYPESCRIPT: TesteDeMesa.tsx.",
+     "novidade": "A tabela é gerada do rastro real, com correção célula a célula e diagnóstico da concepção, alinhada à prática brasileira do teste de mesa."
+    },
+    {
+     "nome": "4.7 Alertas silenciosos com precisão medida",
+     "descricao": "Uma lâmpada na margem aponta equívocos que não geram erro: soma de dois textos vindos de input, lista = lista.append(4) ou o acumulador zerado dentro do mesmo laço em que acumula. A lâmpada só aparece se a regra tiver precisão de pelo menos 90% no corpus.",
+     "por_que": "As regras ingênuas davam falsos positivos comuns, como print(\"total\", total) e o reset correto no laço de fora. Uma lâmpada errada corrói a confiança da criança na ferramenta.",
+     "evidencias": [
+      "progmiscon.org. https://progmiscon.org/misconceptions/Python/",
+      "Qian, Y.; Lehman, J. (2017). https://doi.org/10.1145/3077618"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "PYTHON: pyvis_motor/alertas.py com regras refinadas. Exemplo: o texto é igual ao nome de uma variável E essa variável não aparece no mesmo print. O corpus é rotulado à parte, com precisão e revocação por regra, e a regra só é ligada se passar de 90%.",
+     "novidade": "Os alertas são ligados ao rastro e liberados só com a precisão medida."
+    }
+   ]
+  },
+  {
+   "nome": "Onda 5: Modificar e Criar",
+   "objetivo": "Fechar o ciclo PRIMM com as etapas Modificar e Criar, que reaproveitam o motor de previsão e de diagnóstico. Caça ao bug e Desafio reverso são variações dessas etapas, não ciclos novos. Inclui o uso em qualquer aparelho. Sem servidor.",
+   "precisa_backend": false,
+   "features": [
+    {
+     "nome": "5.1 Missões PRIMM com 'onde meu programa se perdeu?'",
+     "descricao": "A missão segue as 5 etapas do ciclo. Na etapa Modificar ('faça somar só os pares'), os testes ficam verdes. Quando um teste falha, o botão 'Ver este teste passo a passo' abre a visualização no passo em que a saída ou a primeira variável se afastou da solução de referência, sem dizer como consertar. As dicas vêm em 3 níveis, cada uma com uma pergunta de autoexplicação de um clique.",
+     "por_que": "O PRIMM e a progressão Usar-Modificar-Criar dão estrutura sem tirar a autoria do aluno (Sentance et al., 2019; Lee et al., 2011). Corretores que só dizem 'errado' não ajudam a dar o próximo passo (Keuning et al., 2018). Em Marwan et al. (2019), dicas com autoexplicação melhoraram o desempenho posterior, num estudo com adultos (indício, não prova para este público).",
+     "evidencias": [
+      "Sentance, S. et al. (2019). https://eric.ed.gov/?id=EJ1217966",
+      "Keuning, H.; Jeuring, J.; Heeren, B. (2018). ACM TOCE 19(1). https://research.ou.nl/en/publications/a-systematic-literature-review-of-automated-feedback-generation-f/",
+      "Marwan, S.; Williams, J. J.; Price, T. (2019). ICER 2019. https://isnap.csc.ncsu.edu/home/public/papers/MarwanICER2019.pdf"
+     ],
+     "esforco": "G",
+     "impacto": 5,
+     "implementacao": "MISSÕES: arquivos missoes/*.toml, lidos com tomllib.\n\nPYTHON:\n- pyvis_motor/corretor.py.\n- pyvis_motor/divergencia.py: compara a sequência de mudanças de valor de cada variável, não o índice do passo.\n- pyvis_motor/ajuda.py.\n\nWORKER: nova ação 'corrigir_missao'.\n\nTYPESCRIPT: Trilha.tsx e Missao.tsx, com uma faixa fixa que mostra a etapa atual do ciclo.",
+     "novidade": "Abrir a visualização no passo da divergência e gerar a etapa Investigar a partir do rastro não aparecem juntos nas ferramentas comparadas."
+    },
+    {
+     "nome": "5.2 Parsons esmaecidos validados pela execução",
+     "descricao": "Blocos embaralhados, com distratores vindos do catálogo (< ao lado de <=, range ±1), depois lacunas e por fim escrever do zero. Os blocos se movem pelo teclado (↑↓ para a ordem, ←→ para a indentação) ou por arrasto. 'Executar meu arranjo' mostra no passo a passo onde o arranjo diverge.",
+     "por_que": "Parsons com distratores deram aprendizagem parecida com a de corrigir ou escrever código, em menos tempo (Ericson et al., 2017). Weinman et al. (2021) tiveram 237 participantes no total; nas análises com 50 e 43 alunos, os Parsons esmaecidos tiveram maior aquisição de padrões.",
+     "evidencias": [
+      "Weinman, N.; Fox, A.; Hearst, M. A. (2021). CHI 2021 (tese de Weinman, 2022). https://www2.eecs.berkeley.edu/Pubs/TechRpts/2022/Archive/EECS-2022-257.pdf",
+      "Renkl, A.; Atkinson, R. K. (2003). Educational Psychologist 38(1). https://asu.elsevierpure.com/en/publications/structuring-the-transition-from-example-study-to-problem-solving-"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PYTHON: pyvis_motor/parsons.py quebra a solução em blocos (ast e tokenize), escolhe as lacunas e gera os distratores com as transformações de concepcoes.py. A conferência é feita pelos testes de corretor.py.\n\nTYPESCRIPT: ParsonsBloco.tsx.",
+     "novidade": "Os distratores vêm de um catálogo executável, e o arranjo errado é mostrado passo a passo."
+    },
+    {
+     "nome": "5.3 Exemplos com subobjetivos",
+     "descricao": "Cada bloco de linhas tem uma etiqueta numerada e colorida ('1. Preparar o acumulador', '2. Percorrer os números'...). A linha do tempo fica pintada por subobjetivo, com o número visível. A cada problema novo do par exemplo-problema, mais fases ficam vazias.",
+     "por_que": "Rótulos de subobjetivo melhoraram o desempenho e a transferência em computação (Margulieux et al., 2012; Morrison et al., 2015). Exemplos resolvidos reduzem a carga de quem está começando.",
+     "evidencias": [
+      "Margulieux, L. E.; Guzdial, M.; Catrambone, R. (2012). ICER 2012; Morrison, B. B. et al. (2015). https://www.cs1subgoals.org/publications/",
+      "Chi, M. T. H. et al. (1989). Cognitive Science 13(2). https://asu.elsevierpure.com/en/publications/self-explanations-how-students-study-and-use-examples-in-learning/"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "AUTORIA: comentários '# @meta ...' no código do exemplo.\n\nPYTHON: pyvis_motor/subobjetivos.py usa tokenize para ler as etiquetas e preenche passo['meta'].\n\nTYPESCRIPT: Controles.tsx pinta o slider em segmentos, com o número de cada subobjetivo.",
+     "novidade": "Uma linha do tempo pintada pelo plano do programa."
+    },
+    {
+     "nome": "5.4 Tartaruga com máquina do tempo",
+     "descricao": "Com import turtle, o desenho surge traço a traço, sincronizado com a linha destacada. Voltar no tempo apaga o desenho até aquele passo. Clicar num traço, ou escolhê-lo numa lista navegável pelo teclado, leva ao passo que o desenhou. Há também uma descrição em texto ('quadrado de lado 100').",
+     "por_que": "Cada linha tem um efeito visível que a criança consegue imitar com o corpo (Papert, 1980). O Python Tutor não suporta gráficos.",
+     "evidencias": [
+      "Pelánek, R. (2025). The Design Space of Turtle Graphics Tasks. ACM TOCE 25(2). https://eric.ed.gov/?q=Space&id=EJ1476229",
+      "Python Tutor, unsupported-features. https://github.com/pythontutor-dev/pythontutor/blob/master/unsupported-features.md"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "PYTHON: pyvis_motor/tartaruga.py, registrado em sys.modules['turtle'] durante o exec. Grava resultado['desenho'] com {op, x1, y1, x2, y2, cor, passo}, e cada passo guarda só n_tracos.\n\nTYPESCRIPT: Desenho.tsx em SVG.",
+     "novidade": "Um desenho reversível, ligado às variáveis e ao passo que desenhou cada traço."
+    },
+    {
+     "nome": "5.5 Progresso por ideias e aquecimento espaçado",
+     "descricao": "Um mapa de ideias (sequência → variáveis → if → while → for/range → listas → funções) mostra o estado de cada uma com o porquê ('acertou 4 de 5 palpites sobre laços sem pedir dica'). O aquecimento de 3 perguntas traz variações geradas de ideias de dias atrás, sem relógio visível. 'Levar meu progresso' gera um QR de validade curta. Não há sequência de dias, ranking nem 'dominado' com medalha.",
+     "por_que": "Prática por testes e prática distribuída estão entre as técnicas de maior utilidade (Dunlosky et al., 2013). A aprendizagem para o domínio teve efeito médio positivo (Kulik et al., 1990). Mostrar a competência com evidência real atende à teoria da autodeterminação (Ryan & Deci, 2000).",
+     "evidencias": [
+      "Dunlosky, J. et al. (2013). PSPI. https://www.psychologicalscience.org/publications/journals/pspi/learning-techniques.html",
+      "Kulik, C.-L. C. et al. (1990). Review of Educational Research 60(2). https://www.uky.edu/~gmswan3/575/kulik_kulik_Bangert-Drowns_1990.pdf",
+      "Roediger, H. L.; Karpicke, J. D. (2006). Psychological Science 17(3). https://profiles.wustl.edu/en/publications/test-enhanced-learning-taking-memory-tests-improves-long-term-ret/"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "PYTHON:\n- pyvis_motor/dominio.py com regras transparentes.\n- pyvis_motor/revisao.py com caixas de Leitner.\n- pyvis_motor/variacoes.py troca constantes e nomes e roda rastrear para obter a nova resposta certa.\n\nDADOS: IndexedDB dentro de try/catch, com expiração; os eventos vêm do diário de 2.5.",
+     "novidade": "Um modelo do aluno baseado em evidências de compreensão, sem conta."
+    },
+    {
+     "nome": "5.6 Qualquer aparelho, visões e voz opcional",
+     "descricao": "O PyVis pode ser instalado como app e funciona offline depois do primeiro carregamento. No celular, uma barra de símbolos (: ( ) [ ] = Tab). O painel Leitura oferece Atkinson Hyperlegible, tamanho, contraste e 'uma coisa por vez'. Há três visões (Explorador, Programador, Pro), fixadas pelo link durante as atividades. O personagem Py aparece só no Explorador e pode ser desligado; as falas dele sempre dizem o que aconteceu no código. A voz pt-BR só funciona com vozes locais.",
+     "por_que": "Adolescentes acham pouco autênticos os ambientes infantis (Weintrop & Wilensky, 2015). A OpenDyslexic não mostrou ganho de leitura (Rello & Baeza-Yates, 2013). Vozes remotas do navegador enviariam texto com valores do programa para servidores de terceiros.",
+     "evidencias": [
+      "Weintrop, D.; Wilensky, U. (2015). IDC 2015. https://ccl.northwestern.edu/2014/Weintrop%20and%20Wilensky%20-%202015%20-%20To%20Block%20or%20Not%20to%20Block,%20That%20is%20the%20Question%20St.pdf",
+      "Rello, L.; Baeza-Yates, R. (2013). ASSETS 2013. https://dyslexiahelp.umich.edu/wp-content/uploads/2014/02/good_fonts_for_dyslexia_study.pdf",
+      "MDN, SpeechSynthesis. https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "OFFLINE: vite-plugin-pwa com precache de public/pyodide.\n\nVOZ: useNarrador aceita só vozes com localService=true; se não houver nenhuma, o botão some e a ferramenta explica por quê. SpeechRecognition nunca é usado.\n\nPYTHON: o parâmetro nivel ajusta o vocabulário em erros.py, narrador.py e concepcoes.py.",
+     "novidade": "O PyVis gradua a interface e o vocabulário, e mantém o mesmo Python de verdade."
+    }
+   ]
+  },
+  {
+   "nome": "Onda 6: A turma conectada",
+   "objetivo": "Levar ao professor, ao vivo, o raciocínio da turma, com o servidor apenas transmitindo e guardando JSON pseudonimizado (FastAPI + WebSockets, a partir do endpoint de 3.1). O professor reexecuta o código no próprio navegador, que é possível porque o rastro é determinístico (mesmo código, entradas e semente), e sempre dentro do executor isolado de 1.1.",
+   "precisa_backend": true,
+   "features": [
+    {
+     "nome": "6.1 Sala segura completa e RIPD",
+     "descricao": "O apelido é escolhido de uma lista fechada e é único por sala. O professor pode renomear ou remover um aluno. A sala expira (padrão de 30 dias), e existe o botão 'apagar dados'. A exportação para pesquisa remove comentários, entradas e literais de texto e só inclui os pseudônimos liberados pelo orientador. Há páginas /privacidade para crianças e para os pais.",
+     "por_que": "Atende ao art. 14 da LGPD, ao Enunciado nº 1 da ANPD, à Res. CNS 510/2016 e ao ECA Digital. Apelidos livres permitem ofensa e permitem se passar por um colega.",
+     "evidencias": [
+      "Brasil. LGPD, art. 14. https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+      "Brasil. Lei nº 15.211/2025 (ECA Digital). https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/lei/L15211.htm",
+      "Brasil. CNS. Resolução nº 510/2016. https://www.gov.br/conselho-nacional-de-saude/pt-br/atos-normativos/resolucoes/2016/resolucao-no-510.pdf"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "SERVIDOR: SQLite, tarefa de limpeza das salas vencidas e nenhum IP nos logs.\n\nEXPORTAÇÃO: usa privacidade.higienizar.\n\nRIPD: um relatório de impacto simplificado (LGPD art. 38) por onda, com o fluxo de dados, a base legal, a retenção, o controlador (o professor) e os operadores.",
+     "novidade": "Um desenho sem conta documentado à luz da LGPD, da ANPD, da CNS 510 e do ECA Digital, reaproveitável por outros projetos."
+    },
+    {
+     "nome": "6.2 Painel da aula em 'tela segura'",
+     "descricao": "Por padrão, o painel mostra só dados agregados ('5 alunos com a ideia input devolve número') e esconde os apelidos, para que um Alt-Tab no compartilhamento de tela não exponha ninguém. O detalhe de cada aluno abre com um clique. Os rótulos são neutros, com ícone e texto ('pode precisar de ajuda'), em vez de vermelho para 'parado'. O código do aluno só é enviado quando ele clica em Executar ou pede ajuda. Projetar o código de um aluno exige a permissão dele na tela, e o código projetado passa pela higiene de literais e comentários.",
+     "por_que": "Num estudo com 286 alunos, analytics em tempo real para o professor melhorou a aprendizagem (Holstein et al., 2018), embora em matemática, com sistema tutor e em sala presencial. O Codeopticon mostrou um tutor acompanhando dezenas de alunos ao mesmo tempo (Guo, 2015). A métrica de erro repetido de Becker (2016) é publicada.",
+     "evidencias": [
+      "Holstein, K.; McLaren, B. M.; Aleven, V. (2018). AIED 2018. https://link.springer.com/chapter/10.1007/978-3-319-93843-1_12",
+      "Guo, P. J. (2015). Codeopticon. UIST 2015. https://pg.ucsd.edu/publications/Codeopticon-one-to-many-tutoring-interface_UIST-2015.pdf",
+      "Becker, B. A. (2016). ITiCSE 2016. https://doi.org/10.1145/2899415.2899463"
+     ],
+     "esforco": "G",
+     "impacto": 5,
+     "implementacao": "PYTHON: pyvis_motor/sinais.py, importado tanto no Pyodide quanto no servidor.\n\nTYPESCRIPT: rota /professor com Grade.tsx no modo tela segura.\n\nRELATÓRIO: imprimível, com conceitos ligados à tabela da BNCC Computação (TOML).",
+     "novidade": "Turma da educação básica, sem contas, com sinais baseados em concepções diagnosticadas e reexecução isolada no navegador do professor."
+    },
+    {
+     "nome": "6.3 Previsão coletiva com instrução por pares",
+     "descricao": "O professor congela todas as telas num passo e pergunta 'quanto vale soma aqui?'. Cada aluno responde sozinho. O histograma é anônimo e só aparece depois que todos votam. Depois da discussão em duplas, há uma segunda votação e 'Revelar' anima o passo em todas as telas ao mesmo tempo. Ninguém vê quem votou em quê.",
+     "por_que": "A instrução por pares reduziu a reprovação em disciplinas universitárias de computação (Porter et al., 2013). Apresentar e discutir é o nível mais alto da taxonomia estendida (Myller et al., 2009).",
+     "evidencias": [
+      "Porter, L.; Bailey Lee, C.; Simon, B. (2013). SIGCSE 2013. https://doi.org/10.1145/2445196.2445250",
+      "Myller, N. et al. (2009). http://cs.joensuu.fi/pages/int/pub/myller09.pdf"
+     ],
+     "esforco": "M",
+     "impacto": 5,
+     "implementacao": "SERVIDOR: repassa só {codigo higienizado, entradas, semente, passo_alvo, ponto}. Cada cliente roda rastrear localmente.\n\nPYTHON: o ponto e as alternativas vêm de previsao.py e concepcoes.py.",
+     "novidade": "O ciclo votar → discutir → votar de novo → revelar a execução sincronizada, com distratores diagnósticos gerados automaticamente."
+    },
+    {
+     "nome": "6.4 Fila de ajuda com hipótese estruturada",
+     "descricao": "Antes de entrar na fila, o aluno clica na linha suspeita e escolhe o valor que esperava. Não há texto livre. O professor vê a fila com o código, o erro e a hipótese do aluno. Enquanto espera, o aluno pode abrir as dicas com autoexplicação de 5.1.",
+     "por_que": "Formular a hipótese já é um exercício. O contexto acelera o atendimento (Guo, 2015). Sem texto livre, o risco de expor dados pessoais é menor.",
+     "evidencias": [
+      "Guo, P. J. (2015). https://pg.ucsd.edu/publications/Codeopticon-one-to-many-tutoring-interface_UIST-2015.pdf"
+     ],
+     "esforco": "M",
+     "impacto": 4,
+     "implementacao": "SERVIDOR: uma deque por sala, via WebSocket.\n\nTYPESCRIPT: BotaoAjuda.tsx e FilaAjuda.tsx. As mensagens do professor para o aluno são só prontas.",
+     "novidade": "Uma fila contextualizada para aula online de Python na educação básica."
+    },
+    {
+     "nome": "6.5 Galeria de soluções e mural moderados",
+     "descricao": "As soluções certas aparecem agrupadas em 'jeitos de resolver', e as erradas por concepção, sempre sem autor. No mural, 'Mostrar para a turma' envia um desenho ou programa; todo envio e todo remix passam pela moderação do professor. Não há curtidas, visualizações nem contagem de remix. Cada item tem o botão 'avisar o professor', e o mural expira junto com a sala.",
+     "por_que": "Agrupar soluções ajudou monitores a ver a variedade e as concepções (Glassman et al., 2015). O pertencimento motiva (Ryan & Deci, 2000). Contadores sociais trazem de volta a comparação social.",
+     "evidencias": [
+      "Glassman, E. L. et al. (2015). OverCode. ACM TOCHI 22(2). https://www.microsoft.com/en-us/research/publication/overcode-visualizing-variation-in-student-solutions-to-programming-problems-at-scale/",
+      "Ryan, R. M.; Deci, E. L. (2000). American Psychologist 55(1). https://scispace.com/papers/self-determination-theory-and-the-facilitation-of-intrinsic-1fyrp9az8e"
+     ],
+     "esforco": "M",
+     "impacto": 3,
+     "implementacao": "PYTHON: pyvis_motor/agrupar.py, na linha do OverCode, com nomes canônicos tirados das sequências de valores do rastro. Roda no Pyodide do professor, dentro do executor isolado.\n\nSERVIDOR: fila de moderação.",
+     "novidade": "A parte mais cara do OverCode sai quase de graça do rastro. O mural é fechado por sala, moderado e sem métricas sociais."
+    }
+   ]
+  }
+ ],
+ "fora_do_escopo": [
+  {
+   "nome": "Contas de aluno (login, e-mail, senha)",
+   "motivo": "A LGPD (art. 14) exige o mínimo necessário para dados de crianças e adolescentes. Código da sala, apelido gerado e progresso portátil por QR resolvem sem essa barreira."
+  },
+  {
+   "nome": "Vocabulário de aposta ('Aposte!', 'apostas certas')",
+   "motivo": "Normaliza a linguagem de jogo de azar num país em que apostas por menores são proibidas (Lei 14.790/2023), e pais, escolas ou o CEP podem rejeitar a ferramenta só por isso. A ferramenta usa 'palpite' e 'previsão', e uma busca no código impede que 'apost' apareça em textos para o aluno."
+  },
+  {
+   "nome": "Ranking, placar individual, pontos, sequência de acertos, corações e recompensa aleatória",
+   "motivo": "Placares e competição reduziram a motivação intrínseca e as notas num curso gamificado com ranking, medalhas e competição (Hanus & Fox, 2015). Recompensas esperadas minam a motivação (Deci, Koestner & Ryan, 1999). A sequência transforma o erro em perda e distorce os dados de pulos. O art. 20 do ECA Digital, que proíbe loot boxes em jogos para menores, entra só como analogia."
+  },
+  {
+   "nome": "Chat livre e texto livre de alunos enviados ao servidor",
+   "motivo": "É um risco com menores e um peso de moderação para um desenvolvedor só. A ferramenta usa mensagens prontas e hipóteses estruturadas; a conversa acontece no Meet, sob supervisão do professor."
+  },
+  {
+   "nome": "Executar o código dos alunos no servidor",
+   "motivo": "Exigiria uma sandbox cara e arriscada. Com o rastro determinístico, o professor reexecuta no próprio navegador, dentro do executor isolado."
+  },
+  {
+   "nome": "Tutor de IA generativa (antiga onda 5)",
+   "motivo": "Ficou fora do TCC e do produto por enquanto. Sem guarda-corpos, a IA pode prejudicar a aprendizagem (Bastani et al., 2025, PNAS, doi:10.1073/pnas.2422633122). Mandar texto de menores a um provedor estrangeiro é transferência internacional (LGPD art. 33). Também faltaria um protocolo para revelações graves (ECA art. 13). Só poderia voltar com hipótese estruturada em vez de texto livre, retenção zero contratual, detector de risco que avisa só o professor, aviso antes de digitar e cota definida pelo professor, sem metáfora de vidas."
+  },
+  {
+   "nome": "Linguagem própria em blocos ou linguagem gradual",
+   "motivo": "Foge do escopo de um TCC, e adolescentes acham pouco autênticos os ambientes de blocos (Weintrop & Wilensky, 2015). Parsons e alternativas reduzem a digitação mantendo o Python de verdade."
+  },
+  {
+   "nome": "Modo dupla remota com edição sincronizada",
+   "motivo": "Custa muito (CRDT ou trava de turno) sem contribuir para a tese, e o Meet com compartilhamento de tela já permite trabalhar em dupla."
+  },
+  {
+   "nome": "Bayesian Knowledge Tracing",
+   "motivo": "Regras transparentes são mais fáceis de explicar a alunos, pais e banca, e o BKT exige parâmetros ajustados com dados que ainda não existem."
+  },
+  {
+   "nome": "Comunidade ou galeria pública aberta",
+   "motivo": "É problemática para a privacidade de menores. O PyVis tem só mural fechado por sala, moderado e sem métricas sociais."
+  },
+  {
+   "nome": "Bibliotecas externas e GUI além do turtle (pygame, numpy, tkinter)",
+   "motivo": "Fogem do objetivo de rastrear conceitos básicos, pesam no download do Pyodide e quebram o modelo de passos."
+  },
+  {
+   "nome": "Leitura em voz alta ao microfone para a turma e gravação de voz pela ferramenta",
+   "motivo": "Expõe alunos tímidos ou ansiosos. Swidan & Hermans (2019) só mostraram ganho na memória da sintaxe quando o próprio aluno lia, sem diferença na compreensão. SpeechRecognition envia áudio para fora."
+  },
+  {
+   "nome": "Fonte 'para disléxicos' (OpenDyslexic)",
+   "motivo": "Não mostrou ganho de leitura (Rello & Baeza-Yates, 2013)."
+  },
+  {
+   "nome": "Celebrações frequentes e elogio à inteligência",
+   "motivo": "Elogiar a inteligência reduz a persistência após falhas em crianças (Mueller & Dweck, 1998). O feedback elogia o processo ('lembrou que a lista começa no 0')."
+  },
+  {
+   "nome": "Mapa narrativo extenso com história por capítulos",
+   "motivo": "O custo de produzir conteúdo é alto para uma pessoa só e não contribui para a tese."
+  }
+ ],
+ "riscos": [
+  "Prazo do CEP. Pela Norma Operacional CNS 001/2013, a checagem documental e o parecer levam semanas, e cada pendência soma mais 30 dias; com reuniões mensais e o recesso, o realista é de 2 a 4 meses. Hoje é outubro de 2026, então a coleta com menores pode ficar inviável neste semestre. Mitigação: confirmar já com o orientador a data da defesa e o calendário do CEP. Submeter na semana 1, com o orientador como pesquisador responsável, anuência da instituição ou empresa das aulas e o procedimento do Ofício Circular nº 2/2021/CONEP para etapas virtuais (TCLE e TALE eletrônicos, cópia ao participante, dados retirados da nuvem). O Plano B, que não depende de menores, é a QP1 no corpus mais a revisão por dois professores.",
+  "Coerção e viés do professor-pesquisador-desenvolvedor. Mitigação: o orientador recolhe e guarda os termos, e o professor só recebe a exportação filtrada depois das aulas. O TALE ilustrado garante que recusar não muda nada. Os itens do teste são revisados por outro professor. A gravação de áudio e tela, sem câmera, tem consentimento separado e é apagada depois da transcrição. Pré-registro no OSF.",
+  "Cobertura baixa dos distratores de modelo. Nos 8 exemplos, a sonda dos revisores não deu dois distratores diagnósticos em nenhum ponto. Mitigação: medir no corpus na semana 1 ou 2, com critério de decisão pré-registrado, completar as alternativas com distratores de regra (que não contam como diagnóstico) e desenhar os programas do estudo para tornar as concepções observáveis.",
+  "Vazamento da resposta pelas anotações e pelo narrador. Mitigação: a regra de revelação fica no motor, e test_revelacao.py roda sobre todo o corpus.",
+  "Sobrecarga cognitiva aos 10-12 anos. Mitigação: orçamento de atenção testado, a atividade decide a tela, densidade máxima de perguntas, botão pular e escala de esforço com pensamento em voz alta no piloto.",
+  "Escopo. Mitigação: só as ondas 1 a 3 entram na avaliação; as ondas 4 a 6 aparecem no texto como evolução, com estudos menores e independentes. A estimativa honesta até o piloto é de 8 a 10 semanas para um desenvolvedor que também dá aulas.",
+  "Amostra pequena e heterogênea. Mitigação: calcular agora o N com o número real de alunos; abaixo de cerca de 30, declarar o estudo exploratório. A randomização por item dentro de cada aluno, analisada com modelo misto, ganha potência. A QP4 é só descritiva.",
+  "Transbordamento entre condições no desenho por item: quem prevê pode continuar prevendo mentalmente nos itens Assistir. Mitigação: declarar como limitação, registrar o tempo por item e usá-lo como covariável.",
+  "Segurança do código executado. Mitigação: executor em origem separada com CSP, bloqueio de import js e pyodide, e um teste automatizado que tenta escapar.",
+  "Dados pessoais no conteúdo (nomes em literais, comentários e entradas). Mitigação: eventos sem código e sem entradas, higienizar() em tudo o que sai do aparelho e exemplo 7 trocado por um robô.",
+  "Diferenças entre versões do Python: a semântica do tracer só foi conferida do 3.12 ao 3.14. Mitigação: requires-python >= 3.12, matriz de CI e um job dentro do próprio Pyodide.",
+  "Peso do Pyodide e celulares de entrada. Mitigação: brotli e cache longo desde a Onda 1, limite de passos menor em aparelhos fracos e pedir aos alunos que abram a ferramenta antes da aula.",
+  "Referências: algumas fontes sugeridas não foram verificadas (Ginns, 2005; Putnam et al., 2020; Brod, 2021; o ensaio de Bret Victor) e não são usadas. O local de publicação de Lehtinen, Santos & Sorva (2021) não foi confirmado e é citado pelo arXiv. Conferir no DBLP antes da versão final e trocar fontes secundárias (Wikipédia, blogs, notícias) por DOIs."
+ ],
+ "como_avaliar": "VISÃO GERAL: a avaliação tem três camadas, em ordem de dependência. A primeira (técnica) não depende de menores e garante o TCC mesmo se o CEP atrasar.\n\n1) AVALIAÇÃO TÉCNICA, QP1 (semanas 1 a 6, sem alunos)\n- Corpus de 40 a 60 programas de aula, rotulados à mão.\n- O que medir:\n  - cobertura: % de pontos com pelo menos 1 distrator de modelo, e com 2 ou mais, por concepção e por tipo de pergunta;\n  - precisão e revocação de cada transformação, com programas positivos e negativos;\n  - plausibilidade dos distratores julgada por dois professores, com kappa de Cohen;\n  - ausência de vazamento (test_revelacao.py);\n  - tempo de rastrear e de preparar_atividade num Android de entrada.\n- O critério de decisão sobre a tese é pré-registrado no OSF.\n\n2) PILOTO (1 a 2 semanas, de 3 a 6 alunos de idades diferentes, só com o CEP aprovado)\n- Pensamento em voz alta na aula online, com consentimento específico para gravar áudio e tela, sem câmera.\n- O que medir: taxa de pulos, tempo por pergunta, falhas de entrega, esforço percebido e plausibilidade das frases.\n- Validação dos itens do teste: KR-20, dificuldade, discriminação e equivalência das formas A e B.\n\n3) ESTUDO EXPLORATÓRIO, QP2 a QP4 (com o CEP aprovado)\n- Randomização DENTRO do aluno, por programa: em cada atividade, o motor sorteia, de forma balanceada e determinística pela semente, quais programas o aluno faz em Prever com diagnóstico e quais em Assistir com narração.\n- O formato das perguntas é fixado pelo link: alternativas para 10 a 12 anos, resposta livre para 13 a 17.\n- Mesmos programas e mesmo roteiro nas duas condições, e o tempo por item é registrado.\n- Os programas são escolhidos para tornar as concepções observáveis: um while cuja condição fica falsa no meio do corpo, um input somado sem int, um range cujo limite aparece na saída.\n\n4) INSTRUMENTOS\n- Pré-teste e pós-teste de 6 a 8 itens isomorfos por conceito, com no máximo 10 minutos, em papel ou formulário sem login, formas A e B contrabalançadas e gabarito calculado pelo motor.\n- Itens de outro formato (tabela de rastreio, achar o bug) como medida de transferência.\n- Retenção uma semana depois, se houver tempo.\n- QP2: depois de algumas previsões de resposta livre, um 'por quê?' curto, de um clique ou uma frase, codificado por dois avaliadores (kappa).\n- Questionário com o mesmo instrumento para todas as idades, mais a escolha forçada 'em qual modo você prefere estudar?' e o uso voluntário de cada modo, para contornar o efeito teto do Smileyometer.\n- Entrevista curta com 4 a 6 alunos e diário de campo.\n\n5) ANÁLISE (pacote analise/ em Python, testado com pytest, e notebook reproduzível)\n- QP1: cobertura e precisão, com intervalos de confiança por bootstrap.\n- QP2: cobertura e precisão do diagnóstico SÓ em respostas livres, contra a codificação dos avaliadores. Uma concepção só é atribuída quando aparece em 2 ou mais itens.\n- QP3: modelo misto logístico, acerto no pós-teste ~ condição + pré-teste + faixa etária + tempo + (1|aluno) + (1|item); d de Cohen com IC. O g de Hake é só descritivo (Nissen et al., 2018).\n- QP4: descritiva, com análise temática das entrevistas e prevalência por faixa etária. A comparação com Swidan et al. (2018) é qualitativa, porque eles usaram Scratch e outro instrumento.\n- Se o N ficar abaixo de cerca de 30, todo o estudo com alunos é declarado exploratório.\n\n6) ÉTICA\n- Aprovação do CEP pela Plataforma Brasil (Res. CNS 510/2016) antes de qualquer coleta, com o orientador como responsável.\n- TCLE dos responsáveis e TALE ilustrado dos alunos, recolhidos por um terceiro.\n- Anuência institucional e procedimento do Ofício Circular nº 2/2021/CONEP.\n- Apenas pseudônimos; eventos sem código, sem entradas e sem texto livre.\n- Quem não consentiu usa a ferramenta normalmente e tem os dados descartados de forma automática na exportação, sem ser exposto.\n- RIPD simplificado anexado ao TCC.\n\n7) CRONOGRAMA SUGERIDO\n- Semana 1: submeter ao CEP, perguntar aos alunos em que aparelho assistem às aulas e montar o corpus.\n- Semanas 1 e 2: Onda 1 e decisão sobre a tese, com base na cobertura.\n- Semanas 3 a 8: Onda 2.\n- Semanas 8 e 9: Onda 3 e avaliação técnica completa.\n- Depois da aprovação do CEP: piloto, estudo, análise e escrita.\n- Se o CEP não aprovar a tempo, o TCC se apoia na QP1 e na revisão por professores, e o estudo com alunos vira trabalho futuro já com protocolo aprovado."
+}

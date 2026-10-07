@@ -1,55 +1,49 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { Resultado } from "./tipos";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ErroDoMotor, Ponte, type Acao, type Acoes, type CriarCanal, type EstadoDoMotor } from "./ponte";
 
-const TEMPO_MAXIMO_MS = 10000;
+export type { EstadoDoMotor } from "./ponte";
 
-export type EstadoDoMotor = "carregando" | "pronto" | "executando" | "falhou";
-
-/** Cuida do worker com Python: carregar, executar e reiniciar se travar. */
-export function useMotor() {
+/**
+ * A ponte com o Python para os componentes: o estado (para os botões) e os
+ * pedidos, que devolvem promessas. `criarCanal` só muda nos testes.
+ */
+export function useMotor(criarCanal?: CriarCanal) {
   const [estado, setEstado] = useState<EstadoDoMotor>("carregando");
-  const [aviso, setAviso] = useState<string | null>(null);
-  const workerRef = useRef<Worker | null>(null);
-  const relogioRef = useRef<number | undefined>(undefined);
-  const aoTerminarRef = useRef<((r: Resultado) => void) | null>(null);
-
-  const iniciar = useCallback(() => {
-    const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-    worker.onmessage = ({ data }) => {
-      if (data.tipo === "pronto") {
-        setEstado("pronto");
-      } else if (data.tipo === "falha") {
-        setEstado("falhou");
-      } else if (data.tipo === "resultado") {
-        clearTimeout(relogioRef.current);
-        setEstado("pronto");
-        aoTerminarRef.current?.(data.resultado);
-      }
-    };
-    workerRef.current = worker;
-  }, []);
+  const ponteRef = useRef<Ponte | null>(null);
 
   useEffect(() => {
-    iniciar();
-    return () => workerRef.current?.terminate();
-  }, [iniciar]);
+    const ponte = new Ponte(criarCanal);
+    ponteRef.current = ponte;
+    setEstado(ponte.estado);
+    const parar = ponte.observar(setEstado);
+    return () => {
+      parar();
+      ponte.encerrar();
+      if (ponteRef.current === ponte) ponteRef.current = null;
+    };
+  }, [criarCanal]);
 
-  const executar = useCallback(
-    (codigo: string, entradas: string[], aoTerminar: (r: Resultado) => void) => {
-      aoTerminarRef.current = aoTerminar;
-      setAviso(null);
-      setEstado("executando");
-      relogioRef.current = window.setTimeout(() => {
-        // Programa pesado demais: descarta o Python e prepara outro do zero.
-        workerRef.current?.terminate();
-        setAviso("O programa demorou demais e foi parado.");
-        setEstado("carregando");
-        iniciar();
-      }, TEMPO_MAXIMO_MS);
-      workerRef.current?.postMessage({ codigo, entradas });
-    },
-    [iniciar],
-  );
+  // As funções leem a ponte na hora do pedido: no StrictMode ela é recriada uma vez.
+  const pedidos = useMemo(() => {
+    function comPonte<T>(pedido: (ponte: Ponte) => Promise<T>): Promise<T> {
+      const ponte = ponteRef.current;
+      if (ponte) return pedido(ponte);
+      // Um filho pode pedir no próprio efeito, que roda antes do efeito que cria a
+      // ponte: espera esse commit terminar (a ponte guarda o pedido até o Python carregar).
+      return Promise.resolve().then(() => {
+        const criada = ponteRef.current;
+        return criada ? pedido(criada) : Promise.reject(new ErroDoMotor("Reiniciado", "O Python ainda está carregando."));
+      });
+    }
+    return {
+      rastrear: (...args: Parameters<Ponte["rastrear"]>) => comPonte((p) => p.rastrear(...args)),
+      prepararAtividade: (...args: Parameters<Ponte["prepararAtividade"]>) => comPonte((p) => p.prepararAtividade(...args)),
+      corrigir: (...args: Parameters<Ponte["corrigir"]>) => comPonte((p) => p.corrigir(...args)),
+      pedir: (<A extends Acao>(acao: A, dados: Acoes[A]["dados"]) => comPonte((p) => p.pedir(acao, dados))) as Ponte["pedir"],
+    };
+  }, []);
 
-  return { estado, aviso, executar };
+  return { estado, ...pedidos };
 }
+
+export type Motor = ReturnType<typeof useMotor>;
