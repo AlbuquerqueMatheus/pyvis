@@ -94,6 +94,9 @@ export function UsoLivre({ criarCanal }: { criarCanal?: CriarCanal }) {
     <div className="min-h-screen">
       <Cabecalho estado={motor.estado}>
         <nav aria-label="Outras páginas" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <a href="#/praticar" className={link}>
+            Praticar
+          </a>
           <a href="#/criar" className={link}>
             Professor: criar atividade
           </a>

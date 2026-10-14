@@ -96,10 +96,87 @@ const SALA: Record<string, (dados: Record<string, unknown>) => Resposta> = {
   },
 };
 
-type Opcoes = { travar?: boolean; semAtividade?: boolean };
+// --- Praticar: uma imitação pequena de praticar.py --------------------------------
+// Famílias de mentira com poucas sementes no banco; cada exercício é um dos
+// programas gravados (if, for, while), para o palco rodar de verdade.
+
+export const CATALOGO_FALSO = {
+  temas: [
+    { id: "variaveis", nome: "Variáveis", descricao: "Guardar valores com nomes.", niveis: [{ nivel: 1, nome: "Guardar e mudar valores" }, { nivel: 2, nome: "Contas e textos" }] },
+    { id: "condicoes", nome: "Condições", descricao: "Escolher um caminho com if.", niveis: [{ nivel: 1, nome: "Se e senão" }] },
+    // 'Repetir com for' ainda sem família: a série sai vazia.
+    { id: "lacos", nome: "Laços", descricao: "Repetir comandos.", niveis: [{ nivel: 1, nome: "Repetir com while" }, { nivel: 2, nome: "Repetir com for" }] },
+  ],
+  familias: {
+    robo_teste: { versao: 1, tema: "variaveis" },
+    pet_teste: { versao: 2, tema: "variaveis" },
+    porta_teste: { versao: 1, tema: "condicoes" },
+    volta_teste: { versao: 1, tema: "lacos" },
+  },
+} as const;
+const NIVEIS_FALSOS: Record<string, number[]> = { robo_teste: [1, 2], pet_teste: [1], porta_teste: [1], volta_teste: [1] };
+export const BANCO_FALSO = [3, 8, 15, 21, 34, 42];
+const PROGRAMAS_DO_EXERCICIO = ["if_else", "for", "while"] as const;
+
+/** O contexto do exercício falso: diz a família e a semente, para o teste saber qual abriu. */
+export function contextoFalso(familia: string, semente: number): string {
+  return `Programa ${familia} ${semente}.`;
+}
+
+/** O montar_serie falso, também usado direto pelos testes (achar uma semente com a série que eles querem). */
+export function serieFalsa(dados: Record<string, unknown>): ItemFalso[] {
+  const { tema, nivel, semente } = dados as { tema: string; nivel: number; semente: number };
+  const quantidade = Number(dados.quantidade ?? 5);
+  const excluir = new Set((dados.excluir ?? []) as string[]);
+  const familias = Object.entries(CATALOGO_FALSO.familias)
+    .filter(([nome, f]) => f.tema === tema && NIVEIS_FALSOS[nome].includes(nivel) && (dados.familia === undefined || dados.familia === nome))
+    .sort(([a], [b]) => hashFalso(`${semente}:${a}`).localeCompare(hashFalso(`${semente}:${b}`)));
+  const filas = familias.map(([nome, f]) =>
+    BANCO_FALSO.map((s) => `${nome}@${f.versao}:${nivel}:${s}`).sort((a, b) => hashFalso(`${semente}:${a}`).localeCompare(hashFalso(`${semente}:${b}`))),
+  );
+  const ordem = BANCO_FALSO.flatMap((_, k) => filas.map((fila) => fila[k]));
+  return ordem
+    .filter((chave) => !excluir.has(chave))
+    .slice(0, quantidade)
+    .map((chave) => {
+      const [familia, resto] = chave.split("@");
+      const [versao, , s] = resto.split(":");
+      return { familia, versao: Number(versao), nivel, semente: Number(s), chave };
+    });
+}
+
+type ItemFalso = { familia: string; versao: number; nivel: number; semente: number; chave: string };
+
+const PRATICAR: Record<string, (dados: Record<string, unknown>, opcoes: Opcoes) => Resposta> = {
+  catalogo_praticar: () => ({ ok: true, resultado: CATALOGO_FALSO }),
+  montar_serie: (dados, opcoes) => (opcoes.falharSerie ? { ok: false, erro: "RuntimeError: falhou" } : { ok: true, resultado: serieFalsa(dados) }),
+  gerar_exercicio: (dados, opcoes) => {
+    const { familia, nivel, semente } = dados as { familia: string; nivel: number; semente: number };
+    if (opcoes.falharExercicios?.includes(semente)) return { ok: false, erro: "ValueError: este exercício não passou na conferência" };
+    const programa = rastros[PROGRAMAS_DO_EXERCICIO[semente % PROGRAMAS_DO_EXERCICIO.length]];
+    const { versao, tema } = CATALOGO_FALSO.familias[familia as keyof typeof CATALOGO_FALSO.familias];
+    return {
+      ok: true,
+      resultado: { familia, versao, tema, nivel, semente, esqueleto: "teste", contexto: contextoFalso(familia, semente), codigo: programa.codigo, entradas: [] },
+    };
+  },
+};
+
+/** Um pedido segurado pelo teste: `soltar()` manda a resposta de verdade, `soltar(resposta)` manda outra. */
+export type Segurado = { pedido: Pedido; soltar: (resposta?: Resposta) => void };
+
+type Opcoes = {
+  travar?: boolean;
+  semAtividade?: boolean;
+  falharExercicios?: number[];
+  falharSerie?: boolean;
+  /** Os pedidos que o teste segura para responder depois (uma resposta que chega atrasada). */
+  segurar?: (pedido: Pedido) => boolean;
+};
 
 export function pythonFalso(opcoes: Opcoes = {}) {
   const pedidos: Pedido[] = [];
+  const segurados: Segurado[] = [];
   let nome: string | null = null;
   let formato: "alternativas" | "livre" = "alternativas";
 
@@ -123,6 +200,7 @@ export function pythonFalso(opcoes: Opcoes = {}) {
       return gravada ? { ok: true, resultado: gravada.correcao } : { ok: false, erro: `KeyError: sem correção gravada para ${JSON.stringify(resposta)}` };
     }
     if (pedido.acao in SALA) return SALA[pedido.acao](pedido.dados as Record<string, unknown>);
+    if (pedido.acao in PRATICAR) return PRATICAR[pedido.acao](pedido.dados as Record<string, unknown>, opcoes);
     return { ok: false, erro: `ValueError: ação ${pedido.acao} fora do teste` };
   }
 
@@ -132,11 +210,15 @@ export function pythonFalso(opcoes: Opcoes = {}) {
       enviar(pedido) {
         pedidos.push(pedido);
         if (opcoes.travar) return;
+        if (opcoes.segurar?.(pedido)) {
+          segurados.push({ pedido, soltar: (outra) => aoReceber(JSON.stringify({ id: pedido.id, ...(outra ?? responder(pedido)) })) });
+          return;
+        }
         const resposta = { id: pedido.id, ...responder(pedido) };
         queueMicrotask(() => aoReceber(JSON.stringify(resposta)));
       },
       encerrar() {},
     };
   };
-  return { criar, pedidos };
+  return { criar, pedidos, segurados };
 }
