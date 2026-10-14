@@ -135,6 +135,26 @@ describe("Ponte", () => {
     await expect(hash).resolves.toBe("abc");
   });
 
+  it("montar_serie e gerar_exercicio têm o tempo da atividade e não deixam o motor 'ocupado'", async () => {
+    vi.useFakeTimers();
+    const { criar, canais } = canalFalso();
+    const ponte = new Ponte(criar);
+    canais[0].responder({ tipo: "pronto" });
+    const estados: string[] = [];
+    ponte.observar((estado) => estados.push(estado));
+    const serie = ponte.pedir("montar_serie", { tema: "variaveis", nivel: 1, semente: 7 });
+    expect(canais[0].pedidos[0]).toMatchObject({ acao: "montar_serie", dados: { tema: "variaveis", nivel: 1, semente: 7 } });
+    canais[0].responder(resposta(canais[0].pedidos[0].id, []));
+    await expect(serie).resolves.toEqual([]);
+    const exercicio = ponte.pedir("gerar_exercicio", { familia: "robo_energia", nivel: 1, semente: 3 });
+    vi.advanceTimersByTime(TEMPO_LIMITE_ATIVIDADE_MS - 1);
+    expect(canais).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    await expect(exercicio).rejects.toMatchObject({ tipo: "TempoEsgotado", message: "O exercício demorou demais para ficar pronto." });
+    expect(canais[0].encerrado).toBe(true);
+    expect(estados).not.toContain("ocupado");
+  });
+
   it("falha ao carregar rejeita tudo e os próximos pedidos", async () => {
     const { criar, canais } = canalFalso();
     const ponte = new Ponte(criar);

@@ -26,6 +26,11 @@ jobs:
       - name: Casos da revelação em dia com o motor
         if: matrix.python == '3.12'
         run: python frontend/scripts/casos_revelacao.py --conferir
+      # O banco de sementes da área Praticar sai das famílias e do verificador: se um dos dois
+      # mudou e ninguém gerou de novo, a página abriria exercícios que não passaram na conferência.
+      - name: Banco do Praticar em dia com as famílias
+        if: matrix.python == '3.12'
+        run: python analise/verificar_familias.py --conferir
 
   pyodide:
     name: Motor dentro do Pyodide (Node)

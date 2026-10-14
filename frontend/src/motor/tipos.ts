@@ -299,3 +299,31 @@ export type Resumo = {
   revisar: string[];
   numeros: { programas: number; palpites: number; pulados: number; explicacoes: number };
 };
+
+// --- Praticar (pyvis_motor/praticar.py) ---------------------------------------
+
+export type TemaDePraticar = "variaveis" | "condicoes" | "lacos";
+export type NivelDePraticar = 1 | 2 | 3;
+
+/** Temas e níveis da área Praticar. O nível aparece para o aluno pelo nome, nunca pelo número. */
+export type CatalogoPraticar = {
+  temas: { id: TemaDePraticar; nome: string; descricao: string; niveis: { nivel: NivelDePraticar; nome: string }[] }[];
+  familias: Record<string, { versao: number; tema: TemaDePraticar }>;
+};
+
+/** Um item da série; `chave` é "familia@versao:nivel:semente" (o que volta em `excluir`). */
+export type ItemDaSerie = { familia: string; versao: number; nivel: NivelDePraticar; semente: number; chave: string };
+
+export type ExercicioGerado = {
+  familia: string;
+  versao: number;
+  tema: TemaDePraticar;
+  nivel: NivelDePraticar;
+  semente: number;
+  /** Id do esqueleto da família que gerou o programa. */
+  esqueleto: string;
+  /** Uma frase curta que situa o programa (as perguntas vêm da atividade de prever). */
+  contexto: string;
+  codigo: string;
+  entradas: string[];
+};

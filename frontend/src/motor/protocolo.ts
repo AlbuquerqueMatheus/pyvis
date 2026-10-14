@@ -17,4 +17,7 @@ export const ACOES = [
   "resumo",
   "sortear_condicoes",
   "montar_entrega",
+  "catalogo_praticar",
+  "montar_serie",
+  "gerar_exercicio",
 ] as const satisfies readonly (keyof Acoes)[];

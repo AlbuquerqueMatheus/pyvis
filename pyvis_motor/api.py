@@ -13,7 +13,7 @@ nada. Rodar de novo apaga a atividade anterior.
 import json
 
 from . import apelido as apelidos
-from . import privacidade, registro
+from . import praticar, privacidade, registro
 from .anotar import anotar
 from .narrador import narrar_resultado
 from .previsao import corrigir as _corrigir
@@ -137,6 +137,27 @@ def montar_entrega(apelido, eventos):
     return registro.montar_entrega(apelido, eventos)
 
 
+# --- Praticar -----------------------------------------------------------------
+
+
+def catalogo_praticar():
+    """Temas, níveis (pelo nome do conteúdo) e famílias da área Praticar (praticar.catalogo)."""
+    return praticar.catalogo()
+
+
+def montar_serie(tema, nivel, semente, quantidade=5, familia=None, excluir=()):
+    """Os próximos itens da série {familia, versao, nivel, semente, chave} (praticar.montar_serie)."""
+    return praticar.montar_serie(tema, nivel, semente, quantidade, familia, excluir)
+
+
+def gerar_exercicio(familia, nivel, semente):
+    """O exercício {familia, versao, tema, nivel, semente, esqueleto, contexto, codigo, entradas}.
+
+    Não mexe no último rastro: a página roda o código depois, com rastrear.
+    """
+    return praticar.gerar_exercicio(familia, nivel, semente)
+
+
 ACOES = {
     "rastrear": rastrear,
     "preparar_atividade": preparar_atividade,
@@ -151,6 +172,9 @@ ACOES = {
     "resumo": resumo,
     "sortear_condicoes": sortear_condicoes,
     "montar_entrega": montar_entrega,
+    "catalogo_praticar": catalogo_praticar,
+    "montar_serie": montar_serie,
+    "gerar_exercicio": gerar_exercicio,
 }
 
 

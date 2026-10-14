@@ -6,7 +6,8 @@ import re
 import pytest
 
 import pyvis_motor
-from pyvis_motor import api, registro
+from pyvis_motor import api, gerador, praticar, registro
+from pyvis_motor.banco import BANCO
 from pyvis_motor.revelacao import visivel
 from test_narrador import EXEMPLOS_FIXOS
 
@@ -316,3 +317,139 @@ def test_executar_direto_e_exportado_no_pacote():
         api.executar("code_hash", "x = 1")
     with pytest.raises(AttributeError):
         pyvis_motor.nao_existe  # noqa: B018
+
+
+# --- Praticar ----------------------------------------------------------------------------
+
+
+def test_catalogo_praticar():
+    catalogo = resultado_de("catalogo_praticar")
+    assert [tema["id"] for tema in catalogo["temas"]] == ["variaveis", "condicoes", "lacos"]
+    for tema in catalogo["temas"]:
+        assert set(tema) == {"id", "nome", "descricao", "niveis"}
+        assert [nivel["nivel"] for nivel in tema["niveis"]] == [1, 2, 3]
+        assert all(nivel["nome"] for nivel in tema["niveis"])
+    assert catalogo["familias"]["robo_energia"] == {"versao": 1, "tema": "variaveis"}
+
+
+def test_montar_serie_e_a_mesma_para_a_mesma_semente():
+    dados = {"tema": "variaveis", "nivel": 2, "semente": 2026}
+    serie = resultado_de("montar_serie", dados)
+    assert serie == resultado_de("montar_serie", dados)
+    assert len(serie) == 5 and len({item["chave"] for item in serie}) == 5
+    for item in serie:
+        assert set(item) == {"familia", "versao", "nivel", "semente", "chave"}
+        assert item["chave"] == f"{item['familia']}@{item['versao']}:{item['nivel']}:{item['semente']}"
+        assert item["semente"] in BANCO[item["chave"].rsplit(":", 1)[0]]
+    # As famílias do tema se alternam.
+    familias = [item["familia"] for item in serie]
+    assert all(a != b for a, b in zip(familias, familias[1:]))
+    assert resultado_de("montar_serie", {**dados, "semente": 2027}) != serie
+
+
+def test_montar_serie_tem_valor_fixo():
+    # Contrato do link do professor: a mesma série em qualquer aparelho, no CPython
+    # e no Pyodide (este arquivo roda nos dois). Se mudar, o link já mandado abre
+    # outra série. A ordem sai só do sha256, nunca do hash() do Python.
+    serie = resultado_de("montar_serie", {"tema": "variaveis", "nivel": 1, "semente": 2026})
+    assert [item["chave"] for item in serie] == [
+        "pet_lanche@1:1:37", "robo_energia@1:1:2", "pet_lanche@1:1:34", "robo_energia@1:1:20", "pet_lanche@1:1:5",
+    ]
+    serie = resultado_de("montar_serie", {"tema": "lacos", "nivel": 3, "semente": 7, "quantidade": 3})
+    assert [item["chave"] for item in serie] == ["jardim_pets@1:3:32", "robo_oficina@1:3:40", "jardim_pets@1:3:24"]
+
+
+@pytest.mark.parametrize("tema", ["variaveis", "condicoes", "lacos"])
+def test_montar_serie_nao_repete_esqueleto(tema):
+    # O mesmo programa com outros números só volta depois dos outros esqueletos da família.
+    for nivel in (1, 2, 3):
+        for semente in range(0, 400, 7):
+            serie = praticar.montar_serie(tema, nivel, semente)
+            pares = [(item["familia"], gerador.esqueleto_de(item["familia"], nivel, item["semente"])) for item in serie]
+            assert len(set(pares)) == len(pares), (tema, nivel, semente, pares)
+
+
+def test_montar_serie_pula_os_vistos_sem_mudar_a_ordem():
+    dados = {"tema": "variaveis", "nivel": 1, "semente": 9, "quantidade": 8}
+    serie = resultado_de("montar_serie", dados)
+    vistos = [serie[0]["chave"], serie[3]["chave"]]
+    outra = resultado_de("montar_serie", {**dados, "quantidade": 6, "excluir": vistos})
+    assert outra == [item for item in serie if item["chave"] not in vistos]
+    # "Outro exercício": o próximo da série que ainda não foi visto.
+    assert resultado_de("montar_serie", {**dados, "quantidade": 1, "excluir": [serie[0]["chave"]]}) == [serie[1]]
+
+
+def test_montar_serie_de_uma_familia_e_ate_acabar():
+    serie = resultado_de("montar_serie", {"tema": "variaveis", "nivel": 3, "semente": 1, "familia": "pet_lanche"})
+    assert {item["familia"] for item in serie} == {"pet_lanche"}
+    todos = resultado_de("montar_serie", {"tema": "variaveis", "nivel": 3, "semente": 1, "familia": "pet_lanche", "quantidade": 20})
+    vistos = [item["chave"] for item in todos] + [f"pet_lanche@1:3:{s}" for s in BANCO["pet_lanche@1:3"]]
+    assert resultado_de("montar_serie", {"tema": "variaveis", "nivel": 3, "semente": 1, "familia": "pet_lanche", "excluir": vistos}) == []
+
+
+def test_montar_serie_sem_nada_no_banco_e_vazia():
+    # Um tema e nível ainda sem itens no banco dá uma série vazia, sem erro (a página diz "Ainda não há exercícios").
+    original = praticar.BANCO
+    praticar.BANCO = {}
+    try:
+        serie = resultado_de("montar_serie", {"tema": "lacos", "nivel": 1, "semente": 1})
+    finally:
+        praticar.BANCO = original
+    assert serie == []
+
+
+@pytest.mark.parametrize("dados, trecho", [
+    ({"tema": "funcoes", "nivel": 1, "semente": 1}, "tema desconhecido"),
+    ({"tema": "variaveis", "nivel": 0, "semente": 1}, "nível"),
+    ({"tema": "variaveis", "nivel": 1, "semente": -1}, "semente"),
+    ({"tema": "variaveis", "nivel": 1, "semente": 1, "quantidade": 0}, "quantidade"),
+    ({"tema": "variaveis", "nivel": 1, "semente": 1, "quantidade": 21}, "quantidade"),
+    ({"tema": "variaveis", "nivel": 1, "semente": 1, "familia": "nao_existe"}, "família"),
+    ({"tema": "variaveis", "nivel": 1, "semente": 1, "excluir": "pet_lanche@1:1:0"}, "excluir"),
+    ({"tema": "variaveis", "nivel": 1, "semente": 1, "excluir": [3]}, "excluir"),
+])
+def test_montar_serie_recusa_pedido_invalido(dados, trecho):
+    resposta = pedir("montar_serie", dados)
+    assert resposta["ok"] is False and trecho in resposta["erro"]
+
+
+def test_gerar_exercicio_do_banco_nao_mexe_no_ultimo_rastro():
+    api.rastrear("x = 1\n")
+    antes = dict(api.ultimo)
+    item = resultado_de("montar_serie", {"tema": "variaveis", "nivel": 1, "semente": 5, "quantidade": 1})[0]
+    exercicio = resultado_de("gerar_exercicio", {"familia": item["familia"], "nivel": item["nivel"], "semente": item["semente"]})
+    assert exercicio == gerador.gerar(item["familia"], item["nivel"], item["semente"])
+    assert set(exercicio) == {"familia", "versao", "tema", "nivel", "semente", "esqueleto", "contexto", "codigo", "entradas"}
+    assert api.ultimo == antes
+    # A página roda o código do exercício como qualquer outro.
+    assert resultado_de("rastrear", {"codigo": exercicio["codigo"]})["erro"] is None
+
+
+def test_gerar_exercicio_fora_do_banco_passa_pela_conferencia_completa():
+    fora = max(BANCO["robo_energia@1:1"]) + 1000
+    assert resultado_de("gerar_exercicio", {"familia": "robo_energia", "nivel": 1, "semente": fora})["semente"] == fora
+    original = praticar.verificador.verificar
+    praticar.verificador.verificar = lambda exercicio: {"ok": False, "motivos": ["saida_longa"]}
+    try:
+        recusado = pedir("gerar_exercicio", {"familia": "robo_energia", "nivel": 1, "semente": fora})
+        do_banco = pedir("gerar_exercicio", {"familia": "robo_energia", "nivel": 1, "semente": BANCO["robo_energia@1:1"][0]})
+    finally:
+        praticar.verificador.verificar = original
+    assert recusado == {"ok": False, "erro": "ValueError: este exercício não passou na conferência"}
+    assert do_banco["ok"]  # do banco, só a conferência barata
+
+
+def test_gerar_exercicio_do_banco_recusado_pela_conferencia_barata():
+    semente = BANCO["robo_energia@1:1"][0]
+    original = praticar.verificador.conferir_rapido
+    praticar.verificador.conferir_rapido = lambda exercicio: ["palavra_proibida:contexto:x"]
+    try:
+        resposta = pedir("gerar_exercicio", {"familia": "robo_energia", "nivel": 1, "semente": semente})
+    finally:
+        praticar.verificador.conferir_rapido = original
+    assert resposta == {"ok": False, "erro": "ValueError: este exercício não passou na conferência"}
+
+
+def test_gerar_exercicio_recusa_pedido_invalido():
+    assert pedir("gerar_exercicio", {"familia": "nao_existe", "nivel": 1, "semente": 0})["ok"] is False
+    assert pedir("gerar_exercicio", {"familia": "robo_energia", "nivel": 1, "semente": 2**32})["ok"] is False

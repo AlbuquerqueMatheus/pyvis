@@ -4,6 +4,7 @@ import { Cabecalho } from "./componentes/Cabecalho";
 import { CriarAtividade } from "./componentes/CriarAtividade";
 import { PaginaDaAtividade } from "./componentes/PaginaDaAtividade";
 import { PaginaDosPais } from "./componentes/PaginaDosPais";
+import { Praticar } from "./componentes/Praticar";
 import { UsoLivre } from "./componentes/UsoLivre";
 import type { CriarCanal } from "./motor/ponte";
 import { useRota, type Rota } from "./rotas";
@@ -15,6 +16,7 @@ const TITULOS: Record<Rota["tela"], string> = {
   livre: "PyVis",
   criar: "Criar atividade · PyVis",
   pais: "Para pais e responsáveis · PyVis",
+  praticar: "Praticar · PyVis",
   atividade: "Atividade · PyVis",
   link_invalido: "Link quebrado · PyVis",
 };
@@ -41,11 +43,12 @@ function LinkInvalido({ motivo }: { motivo: string }) {
 }
 
 /**
- * O PyVis inteiro: a tela vem do fragmento da URL (rotas.ts). Só o uso livre e
- * a atividade carregam o Python; a tela do professor e a dos pais não rodam código.
+ * O PyVis inteiro: a tela vem do fragmento da URL (rotas.ts). O uso livre, a
+ * área Praticar e a atividade carregam o Python; a tela do professor e a dos
+ * pais não rodam código.
  */
 export default function App({ criarCanal }: Props = {}) {
-  const rota = useRota();
+  const { rota, navegacao } = useRota();
 
   // A limpeza ao abrir (spec 2.5): sala sem uso há 30 dias sai do aparelho.
   useEffect(() => {
@@ -61,6 +64,8 @@ export default function App({ criarCanal }: Props = {}) {
       {rota.tela === "livre" && <UsoLivre criarCanal={criarCanal} />}
       {rota.tela === "criar" && <CriarAtividade />}
       {rota.tela === "pais" && <PaginaDosPais />}
+      {/* Um link de série colado na barra de endereço recomeça a página, mesmo que seja o mesmo de antes. */}
+      {rota.tela === "praticar" && <Praticar key={`${navegacao}:${JSON.stringify(rota.pedido)}`} pedido={rota.pedido} criarCanal={criarCanal} />}
       {rota.tela === "atividade" && <PaginaDaAtividade key={rota.fragmento} atividade={rota.atividade} criarCanal={criarCanal} />}
       {rota.tela === "link_invalido" && <LinkInvalido motivo={rota.motivo} />}
     </MotionConfig>

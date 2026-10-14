@@ -11,14 +11,19 @@
 import type {
   Atividade,
   AtividadeLink,
+  CatalogoPraticar,
   ConfigDaAtividade,
   ContextoDoEvento,
   Correcao,
   Entrega,
   Evento,
+  ExercicioGerado,
+  ItemDaSerie,
+  NivelDePraticar,
   RespostaDoAluno,
   Resultado,
   Resumo,
+  TemaDePraticar,
   TipoDeEvento,
 } from "./tipos";
 
@@ -40,6 +45,19 @@ export type Acoes = {
   resumo: { dados: { eventos: Evento[]; atividade?: string }; resultado: Resumo };
   sortear_condicoes: { dados: { sujeito: string; atividade: AtividadeLink }; resultado: ("prever" | "assistir")[] };
   montar_entrega: { dados: { apelido: string; eventos: Evento[] }; resultado: Entrega };
+  catalogo_praticar: { dados: Record<string, never>; resultado: CatalogoPraticar };
+  montar_serie: {
+    dados: {
+      tema: TemaDePraticar;
+      nivel: NivelDePraticar;
+      semente: number;
+      quantidade?: number;
+      familia?: string;
+      excluir?: string[];
+    };
+    resultado: ItemDaSerie[];
+  };
+  gerar_exercicio: { dados: { familia: string; nivel: NivelDePraticar; semente: number }; resultado: ExercicioGerado };
 };
 
 export type Acao = keyof Acoes;
@@ -53,8 +71,14 @@ export const TEMPO_LIMITE_MS = 5000;
  * embutida longa, sem passos onde parar. Aqui é o teto do lado da página.
  */
 export const TEMPO_LIMITE_ATIVIDADE_MS = 3000;
+/**
+ * Na área Praticar, montar a série e gerar o exercício também têm o teto da
+ * atividade: um exercício fora do banco roda a conferência completa no Python.
+ */
+const ACOES_COM_TEMPO_DA_ATIVIDADE: ReadonlySet<Acao> = new Set<Acao>(["preparar_atividade", "gerar_exercicio", "montar_serie"]);
 export const MENSAGEM_TEMPO_ESGOTADO = "O programa demorou demais e foi parado.";
 const MENSAGEM_ATIVIDADE_ESGOTADA = "As perguntas demoraram demais para ficar prontas.";
+const MENSAGEM_EXERCICIO_ESGOTADO = "O exercício demorou demais para ficar pronto.";
 const MENSAGEM_REINICIO = "O Python foi reiniciado. Tente de novo.";
 const MENSAGEM_FALHA = "Não foi possível carregar o Python. Recarregue a página.";
 
@@ -118,8 +142,9 @@ export function limiteDePassos(memoria = (globalThis.navigator as { deviceMemory
 
 /**
  * O que o aluno vê acontecer: só essas ações deixam o motor 'ocupado' (o botão
- * Executar espera e o cabeçalho avisa). As do diário e da sala correm por baixo,
- * sem piscar o aviso a cada passo.
+ * Executar espera e o cabeçalho avisa). As do diário, da sala e da área Praticar
+ * correm por baixo, sem piscar o aviso a cada passo (Praticar mostra o próprio
+ * "Preparando...").
  */
 const ACOES_VISIVEIS: ReadonlySet<Acao> = new Set<Acao>(["rastrear", "preparar_atividade", "corrigir"]);
 
@@ -131,7 +156,8 @@ type Pendente = {
 
 /**
  * Fila de pedidos ao motor. Um pedido por vez vai ao Python (ele roda um de
- * cada vez mesmo). `rastrear` e `preparar_atividade` têm tempo limite: se
+ * cada vez mesmo). `rastrear`, `preparar_atividade` e as ações da área
+ * Praticar (`montar_serie`, `gerar_exercicio`) têm tempo limite: se
  * passar, o Python é descartado e recriado do zero, e a página continua
  * funcionando (o novo Python não tem o último rastro: a atividade se perde).
  */
@@ -240,7 +266,8 @@ export class Ponte {
     const pendente = this.pendentes.get(id)!;
     this.emCurso = id;
     if (ACOES_VISIVEIS.has(pendente.pedido.acao)) this.mudarEstado("ocupado");
-    const limite = pendente.pedido.acao === "rastrear" ? this.tempoLimiteMs : pendente.pedido.acao === "preparar_atividade" ? this.tempoDaAtividadeMs : null;
+    const acao = pendente.pedido.acao;
+    const limite = acao === "rastrear" ? this.tempoLimiteMs : ACOES_COM_TEMPO_DA_ATIVIDADE.has(acao) ? this.tempoDaAtividadeMs : null;
     if (limite !== null) {
       // O relógio só começa quando o Python recebe o pedido, não enquanto ele carrega.
       this.relogio = setTimeout(() => this.esgotarTempo(id), limite);
@@ -253,7 +280,13 @@ export class Ponte {
     this.pendentes.delete(id);
     this.emCurso = null;
     this.canal.encerrar();
-    const mensagem = pendente?.pedido.acao === "preparar_atividade" ? MENSAGEM_ATIVIDADE_ESGOTADA : MENSAGEM_TEMPO_ESGOTADO;
+    const acao = pendente?.pedido.acao;
+    const mensagem =
+      acao === "preparar_atividade"
+        ? MENSAGEM_ATIVIDADE_ESGOTADA
+        : acao === "gerar_exercicio" || acao === "montar_serie"
+          ? MENSAGEM_EXERCICIO_ESGOTADO
+          : MENSAGEM_TEMPO_ESGOTADO;
     pendente?.rejeitar(new ErroDoMotor("TempoEsgotado", mensagem));
     // Os outros pedidos da fila esperam o Python novo; o que estava rodando se perdeu.
     this.canal = this.abrir();
